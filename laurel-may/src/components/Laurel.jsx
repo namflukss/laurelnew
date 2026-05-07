@@ -48,6 +48,31 @@ TIER RULES:
 - Include 1–3 festivals per tier. Omit a tier entirely if it doesn't apply (remove it from the array).
 - Be specific about WHY each festival fits THIS film. Never give generic advice.`
 
+// ─── Festival Data ────────────────────────────────────────────────────────────
+
+const FESTIVALS = [
+  { name: 'Sundance', location: 'Park City, USA', tier: 'A', formats: ['Feature', 'Short', 'Doc'], desc: 'The premier American indie festival — a launching ground for bold independent voices and breakout films.', window: 'Aug–Sep submission · Jan festival' },
+  { name: 'Cannes', location: 'Cannes, France', tier: 'A', formats: ['Feature', 'Short'], desc: 'The world\'s most prestigious festival. Competition, Un Certain Regard, Directors\' Fortnight, and Critics\' Week.', window: 'Jan–Feb submission · May festival' },
+  { name: 'Berlinale', location: 'Berlin, Germany', tier: 'A', formats: ['Feature', 'Short', 'Doc'], desc: 'Politically engaged and artistically ambitious. Strong on international arthouse and first features.', window: 'Oct–Nov submission · Feb festival' },
+  { name: 'Venice', location: 'Venice, Italy', tier: 'A', formats: ['Feature', 'Short', 'Doc'], desc: 'The world\'s oldest film festival. A premier gateway for Oscar-track prestige features and arthouse cinema.', window: 'May–Jun submission · Aug festival' },
+  { name: 'TIFF', location: 'Toronto, Canada', tier: 'A', formats: ['Feature', 'Short', 'Doc'], desc: 'The most commercially significant festival. Ideal for films seeking North American distribution and awards attention.', window: 'Apr–May submission · Sep festival' },
+  { name: 'SXSW', location: 'Austin, USA', tier: 'A', formats: ['Feature', 'Short', 'Doc'], desc: 'Culturally current, genre-bending, and adventurous. The best launchpad for first features and bold narratives.', window: 'Aug–Oct submission · Mar festival' },
+  { name: 'Tribeca', location: 'New York, USA', tier: 'A', formats: ['Feature', 'Short', 'Doc'], desc: 'Strong platform for NY-connected stories and narrative voices. Great for films seeking US distribution.', window: 'Jan–Feb submission · Jun festival' },
+  { name: 'Hot Docs', location: 'Toronto, Canada', tier: 'A', formats: ['Doc'], desc: 'North America\'s largest documentary festival. Essential for feature docs seeking international distribution.', window: 'Oct–Nov submission · Apr festival' },
+  { name: 'Clermont-Ferrand', location: 'Clermont-Ferrand, France', tier: 'A', formats: ['Short'], desc: 'The world\'s most important short film festival. Huge market for short film international sales and licensing.', window: 'Jun–Sep submission · Feb festival' },
+  { name: 'Annecy', location: 'Annecy, France', tier: 'A', formats: ['Animation'], desc: 'The world\'s top animation festival. Essential for any animated short or feature seeking global exposure.', window: 'Jan–Feb submission · Jun festival' },
+  { name: 'Locarno', location: 'Locarno, Switzerland', tier: 'B', formats: ['Feature', 'Short'], desc: 'Avant-garde and adventurous. A respected launchpad for formal experimentation and world cinema auteurs.', window: 'Mar–Apr submission · Aug festival' },
+  { name: 'AFI Fest', location: 'Los Angeles, USA', tier: 'B', formats: ['Feature', 'Short', 'Doc'], desc: 'Free entry, strong LA industry attendance. A solid Oscar qualifier and excellent platform for US releases.', window: 'Aug–Sep submission · Oct festival' },
+  { name: 'True/False', location: 'Columbia, USA', tier: 'B', formats: ['Doc'], desc: 'Championing formally daring nonfiction. Beloved by doc filmmakers for its community feel and curation quality.', window: 'Sep–Oct submission · Mar festival' },
+  { name: 'Sheffield DocFest', location: 'Sheffield, UK', tier: 'B', formats: ['Doc'], desc: 'One of Europe\'s leading documentary festivals with a major industry market and co-production hub.', window: 'Dec–Jan submission · Jun festival' },
+  { name: 'Edinburgh IFF', location: 'Edinburgh, UK', tier: 'B', formats: ['Feature', 'Short', 'Doc'], desc: 'The world\'s longest-running film festival. A strong UK launch platform for international films.', window: 'Feb–Mar submission · Aug festival' },
+  { name: 'Palm Springs ShortFest', location: 'Palm Springs, USA', tier: 'B', formats: ['Short'], desc: 'One of North America\'s top short film festivals. Oscar qualifying and a key stop on the shorts circuit.', window: 'Jan–Mar submission · Jun festival' },
+  { name: 'Rotterdam (IFFR)', location: 'Rotterdam, Netherlands', tier: 'B', formats: ['Feature', 'Short', 'Doc'], desc: 'Champions provocative world cinema and innovative voices. Key festival for adventurous arthouse features.', window: 'Aug–Oct submission · Jan festival' },
+  { name: 'San Sebastián', location: 'San Sebastián, Spain', tier: 'B', formats: ['Feature'], desc: 'Major European competition festival with Golden Shell. Strong for Ibero-American and international arthouse cinema.', window: 'May–Jun submission · Sep festival' },
+]
+
+const FILTERS = ['All', 'Feature', 'Short', 'Doc', 'Animation']
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STARTERS = [
@@ -59,7 +84,7 @@ const STARTERS = [
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL   = 'claude-haiku-4-5-20251001'
 
-// ─── Markdown renderer (for conversational messages) ─────────────────────────
+// ─── Markdown renderer ────────────────────────────────────────────────────────
 
 function renderInline(text) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g)
@@ -77,7 +102,6 @@ function renderMarkdown(text) {
 
   while (i < lines.length) {
     const line = lines[i]
-
     if (line.startsWith('## ')) {
       out.push(<h2 key={i} className={styles.mdH2}>{renderInline(line.slice(3))}</h2>)
       i++
@@ -106,41 +130,34 @@ function renderMarkdown(text) {
       i++
     }
   }
-
   return out
 }
 
 // ─── Strategy parser ──────────────────────────────────────────────────────────
 
 function parseStrategy(text) {
-  // Match ```json ... ``` with flexible whitespace, or a bare { "type": "strategy" ... } block
   const fenced = text.match(/```(?:json)?\s*([\s\S]+?)```/)
   const raw    = fenced ? fenced[1].trim() : null
-
-  // Also try to find a bare JSON object if no fenced block
-  const bare = !raw ? text.match(/(\{[\s\S]*"type"\s*:\s*"strategy"[\s\S]*\})/) : null
+  const bare   = !raw ? text.match(/(\{[\s\S]*"type"\s*:\s*"strategy"[\s\S]*\})/) : null
   const candidate = raw || (bare && bare[1])
-
   if (!candidate) return null
   try {
     const data = JSON.parse(candidate)
     if (data.type === 'strategy' && Array.isArray(data.tiers)) return data
     return null
-  } catch {
-    return null
-  }
+  } catch { return null }
 }
 
 function getIntro(text) {
-  const idx = text.indexOf('```json')
+  const idx = text.indexOf('```')
   return idx > 0 ? text.slice(0, idx).trim() : null
 }
 
 // ─── Strategy Cards ───────────────────────────────────────────────────────────
 
 const TIER_META = {
-  A: { label: 'Top-Tier',  cls: styles.tierA },
-  B: { label: 'Mid-Tier',  cls: styles.tierB },
+  A: { label: 'Top-Tier',        cls: styles.tierA },
+  B: { label: 'Mid-Tier',        cls: styles.tierB },
   C: { label: 'Niche / Regional', cls: styles.tierC },
 }
 
@@ -149,9 +166,7 @@ function FestivalCard({ festival }) {
     <div className={styles.festCard}>
       <div className={styles.festHeader}>
         <span className={styles.festName}>{festival.name}</span>
-        {festival.location && (
-          <span className={styles.festLocation}>{festival.location}</span>
-        )}
+        {festival.location && <span className={styles.festLocation}>{festival.location}</span>}
       </div>
       <p className={styles.festReason}>{festival.reason}</p>
       {festival.tips?.length > 0 && (
@@ -168,19 +183,15 @@ function StrategyMessage({ text }) {
   const intro    = getIntro(text)
 
   if (!strategy) return (
-    <div className={styles.agent}>
-      <div className={styles.msgMeta}>Laurel</div>
-      <div className={`${styles.msgBubble} ${styles.agentBubble}`}>
-        {renderMarkdown(text)}
-      </div>
+    <div className={`${styles.msgBubble} ${styles.agentBubble}`}>
+      {renderMarkdown(text)}
     </div>
   )
 
   return (
     <div className={styles.strategyBlock}>
       {intro && <p className={styles.strategyIntro}>{intro}</p>}
-
-      {strategy.tiers.map(tier => {
+      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
         const meta = TIER_META[tier.tier] || { label: tier.label, cls: styles.tierC }
         return (
           <div key={tier.tier} className={styles.tierSection}>
@@ -194,15 +205,12 @@ function StrategyMessage({ text }) {
           </div>
         )
       })}
-
-      {strategy.closing && (
-        <p className={styles.strategyClosing}>{strategy.closing}</p>
-      )}
+      {strategy.closing && <p className={styles.strategyClosing}>{strategy.closing}</p>}
     </div>
   )
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── LaurelMark ───────────────────────────────────────────────────────────────
 
 function LaurelMark({ size = 28 }) {
   return (
@@ -218,7 +226,96 @@ function LaurelMark({ size = 28 }) {
   )
 }
 
-function KeyScreen({ onReady }) {
+// ─── Landing ──────────────────────────────────────────────────────────────────
+
+function Landing({ onChat, onExplore }) {
+  return (
+    <div className={styles.landing}>
+      <div className={styles.landingInner}>
+        <div className={styles.landingMark}>
+          <LaurelMark size={64} />
+        </div>
+        <h1 className={styles.landingTitle}>Laurel</h1>
+        <p className={styles.landingSubtitle}>Film Festival Strategy</p>
+        <p className={styles.landingBody}>
+          Build a tailored festival submission strategy for your film, or explore the festival landscape.
+        </p>
+        <div className={styles.landingBtns}>
+          <button className={styles.landingBtnPrimary} onClick={onChat}>
+            <span className={styles.landingBtnIcon}>◆</span>
+            Talk with Laurel
+          </button>
+          <button className={styles.landingBtnSecondary} onClick={onExplore}>
+            <span className={styles.landingBtnIcon}>⊞</span>
+            Explore Festivals
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Explore Festivals ────────────────────────────────────────────────────────
+
+function ExploreFestivals({ onBack }) {
+  const [filter, setFilter] = useState('All')
+
+  const visible = filter === 'All'
+    ? FESTIVALS
+    : FESTIVALS.filter(f => f.formats.includes(filter))
+
+  return (
+    <div className={styles.root}>
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <button className={styles.backBtn} onClick={onBack}>← Back</button>
+          <div className={styles.headerDivider} />
+          <div>
+            <div className={styles.headerTitle}>Festivals</div>
+            <div className={styles.headerSub}>Browse the circuit</div>
+          </div>
+        </div>
+      </header>
+
+      <div className={styles.exploreBody}>
+        <div className={styles.filterBar}>
+          {FILTERS.map(f => (
+            <button
+              key={f}
+              className={`${styles.filterBtn} ${filter === f ? styles.filterActive : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.exploreGrid}>
+          {visible.map((fest, i) => (
+            <div key={i} className={styles.exploreFestCard}>
+              <div className={styles.exploreFestTop}>
+                <span className={`${styles.exploreTierBadge} ${styles[`tier${fest.tier}Badge`]}`}>{fest.tier}</span>
+                <span className={styles.exploreFestName}>{fest.name}</span>
+              </div>
+              <span className={styles.exploreFestLocation}>{fest.location}</span>
+              <div className={styles.exploreFestFormats}>
+                {fest.formats.map(fmt => (
+                  <span key={fmt} className={styles.fmtTag}>{fmt}</span>
+                ))}
+              </div>
+              <p className={styles.exploreFestDesc}>{fest.desc}</p>
+              <span className={styles.exploreFestWindow}>{fest.window}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Key Screen ───────────────────────────────────────────────────────────────
+
+function KeyScreen({ onReady, onBack }) {
   const [key, setKey]     = useState('')
   const [error, setError] = useState('')
 
@@ -259,6 +356,7 @@ function KeyScreen({ onReady }) {
         />
         {error && <p className={styles.keyError}>{error}</p>}
         <button className={styles.keyBtn} onClick={submit}>Begin Session →</button>
+        <button className={styles.keyBackBtn} onClick={onBack}>← Back</button>
         <p className={styles.keyNote}>
           Your key is only sent directly to Anthropic's API. It is never logged or stored.
           In production, set <code>VITE_ANTHROPIC_API_KEY</code> in your environment to skip this screen.
@@ -271,6 +369,7 @@ function KeyScreen({ onReady }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Laurel() {
+  const [mode,     setMode]     = useState(null) // null | 'chat' | 'explore'
   const [apiKey,   setApiKey]   = useState(null)
   const [messages, setMessages] = useState([])
   const [input,    setInput]    = useState('')
@@ -345,14 +444,22 @@ export default function Laurel() {
     }
   }
 
-  if (!apiKey) return <KeyScreen onReady={setApiKey} />
+  // Landing
+  if (mode === null) return <Landing onChat={() => setMode('chat')} onExplore={() => setMode('explore')} />
 
+  // Explore
+  if (mode === 'explore') return <ExploreFestivals onBack={() => setMode(null)} />
+
+  // Chat: key screen if no key
+  if (!apiKey) return <KeyScreen onReady={setApiKey} onBack={() => setMode(null)} />
+
+  // Chat
   return (
     <div className={styles.root}>
-      {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <LaurelMark size={22} />
+          <button className={styles.backBtn} onClick={() => setMode(null)}>← Back</button>
+          <div className={styles.headerDivider} />
           <div>
             <div className={styles.headerTitle}>Laurel</div>
             <div className={styles.headerSub}>Film Festival Strategy Agent</div>
@@ -364,17 +471,12 @@ export default function Laurel() {
         </div>
       </header>
 
-      {/* Messages */}
       <div className={styles.messages}>
         {messages.length === 0 && !loading && (
           <div className={styles.welcome}>
-            <div className={styles.welcomeMark}>
-              <LaurelMark size={56} />
-            </div>
-            <h1 className={styles.welcomeTitle}>Hello, I'm Laurel.</h1>
-            <p className={styles.welcomeBody}>
-              Tell me about your film and I'll build your complete festival submission strategy.
-            </p>
+            <div className={styles.welcomeMark}><LaurelMark size={48} /></div>
+            <h2 className={styles.welcomeTitle}>Tell me about your film.</h2>
+            <p className={styles.welcomeBody}>I'll build your complete festival submission strategy.</p>
             <div className={styles.starters}>
               {STARTERS.map((s, i) => (
                 <button key={i} className={styles.starterBtn} onClick={() => send(s)}>{s}</button>
@@ -384,29 +486,16 @@ export default function Laurel() {
         )}
 
         {messages.map((m, i) => {
-          if (m.role === 'user') {
-            return (
-              <div key={i} className={`${styles.msgRow} ${styles.user}`}>
-                <div className={styles.msgMeta}>You</div>
-                <div className={styles.msgBubble}>{m.text}</div>
-              </div>
-            )
-          }
-          // Agent: check for strategy JSON
-          if (parseStrategy(m.text)) {
-            return (
-              <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
-                <div className={styles.msgMeta}>Laurel</div>
-                <StrategyMessage text={m.text} />
-              </div>
-            )
-          }
+          if (m.role === 'user') return (
+            <div key={i} className={`${styles.msgRow} ${styles.user}`}>
+              <div className={styles.msgMeta}>You</div>
+              <div className={styles.msgBubble}>{m.text}</div>
+            </div>
+          )
           return (
             <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
               <div className={styles.msgMeta}>Laurel</div>
-              <div className={`${styles.msgBubble} ${styles.agentBubble}`}>
-                {renderMarkdown(m.text)}
-              </div>
+              <StrategyMessage text={m.text} />
             </div>
           )
         })}
@@ -423,7 +512,6 @@ export default function Laurel() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className={styles.inputArea}>
         <div className={styles.inputWrap}>
           <textarea
@@ -440,9 +528,7 @@ export default function Laurel() {
             onClick={() => send(input)}
             disabled={loading || !input.trim()}
             aria-label="Send"
-          >
-            ↑
-          </button>
+          >↑</button>
         </div>
         <p className={styles.inputHint}>Enter to send · Shift+Enter for new line</p>
       </div>
