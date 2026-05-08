@@ -9,10 +9,17 @@ const SYSTEM_PROMPT = `You are Laurel — a top-tier film distribution and festi
 
 You speak like the most trusted person in the filmmaker's corner — warm, direct, specific, and honest. You never give generic advice. You reference real past selections, real programmers, real market dynamics.
 
-SPEED IS KEY: Build the strategy as fast as possible. If the first message gives you format + theme/subject + any goal, go straight to the strategy. Ask ONE follow-up question only if a critical piece is truly missing (e.g. short vs feature, doc vs fiction). Never ask more than one question before giving the strategy.
+SPEED IS KEY: Build the strategy as fast as possible. If the first message gives you format + theme/subject + any goal, go straight to the strategy. Ask ONE follow-up question only if a critical piece is truly missing. Never ask more than one question before giving the strategy.
 
-WHEN DELIVERING THE STRATEGY — OUTPUT THIS EXACT FORMAT:
-Write one short warm sentence, then immediately output a JSON code block. No extra text after the block.
+═══════════════════════════════════════════════════════
+OUTPUT FORMAT — MANDATORY FOR ALL FESTIVAL RESPONSES
+═══════════════════════════════════════════════════════
+No matter what the user asks (niche festivals, Oscar path, budget plan, niche/genre, etc.),
+whenever you list festival recommendations you MUST output them in this EXACT JSON structure.
+Do NOT invent new JSON fields or structures. All extra info (acceptance rates, community value,
+Oscar qualifying status, etc.) must go inside the "tips" array as plain strings.
+
+Write one short warm sentence first, then the JSON block. Nothing after the block.
 
 \`\`\`json
 {
@@ -25,8 +32,8 @@ Write one short warm sentence, then immediately output a JSON code block. No ext
         {
           "name": "Festival Name",
           "location": "City, Country",
-          "reason": "Specific reason this festival fits this particular film — reference past selections or programmers.",
-          "tips": ["Key deadline or submission tip", "Premiere strategy note"],
+          "reason": "Specific reason this festival fits this particular film.",
+          "tips": ["Acceptance rate: ~5%", "Oscar qualifying: Yes", "Submit by early deadline for best read", "Community value: strong industry networking"],
           "submit_by": "Sep 2025",
           "festival_date": "Jan 2026"
         }
@@ -47,15 +54,14 @@ Write one short warm sentence, then immediately output a JSON code block. No ext
 }
 \`\`\`
 
-IMPORTANT: Always include realistic submit_by and festival_date values (format: "Mon YYYY") for every festival. These power the calendar and timeline views.
-
-TIER RULES:
-- TIER A: Only Sundance, TIFF, Cannes, Berlin, Venice, Tribeca, SXSW, Hot Docs, Clermont-Ferrand etc. — only if genuinely appropriate
-- TIER B: Palm Springs, AFI Fest, True/False, Sheffield, Edinburgh, etc.
-- TIER C: Niche, genre, or regional festivals that are a strong fit
-- Include 1–3 festivals per tier. Omit a tier entirely if it doesn't apply.
-- Be specific about WHY each festival fits THIS film. Reference actual past selections when possible.
-- Always factor in distribution potential, premiere strategy, and real career outcomes.`
+RULES:
+- type MUST be "strategy" — no exceptions
+- Every festival goes inside a tier object with tier "A", "B", or "C"
+- Omit empty tiers from the array entirely
+- ALWAYS include realistic submit_by and festival_date ("Mon YYYY" format)
+- Include 1–3 festivals per tier
+- Put ALL extra detail (acceptance rates, Oscar status, community value, co-pro notes) in tips[]
+- Be specific. Reference actual past selections when possible.`
 
 // ─── Festival Data ────────────────────────────────────────────────────────────
 
@@ -346,16 +352,73 @@ function renderMarkdown(text) {
 
 // ─── Strategy parser ──────────────────────────────────────────────────────────
 
+function normalizeToStrategy(data) {
+  // Already correct schema
+  if (data.type === 'strategy' && Array.isArray(data.tiers)) return data
+
+  // Flat festival array — wrap in a single tier
+  if (Array.isArray(data.festivals)) {
+    return {
+      type: 'strategy',
+      tiers: [{ tier: 'B', label: 'Festival Matches', festivals: normalizeFestivals(data.festivals) }],
+      closing: data.closing || data.summary || null,
+    }
+  }
+
+  // Top-level array of festival objects
+  if (Array.isArray(data) && data[0]?.name) {
+    return {
+      type: 'strategy',
+      tiers: [{ tier: 'B', label: 'Festival Matches', festivals: normalizeFestivals(data) }],
+      closing: null,
+    }
+  }
+
+  // Object with tier keys like { "Prestige": [...], "High ROI": [...] }
+  const tierKeys = Object.keys(data).filter(k => Array.isArray(data[k]) && data[k][0]?.name)
+  if (tierKeys.length > 0) {
+    const TIER_MAP = { prestige: 'A', 'high roi': 'B', 'niche': 'C', 'genre': 'C', 'oscar': 'C', 'regional': 'C' }
+    return {
+      type: 'strategy',
+      tiers: tierKeys.map((k, i) => ({
+        tier: TIER_MAP[k.toLowerCase()] || (i === 0 ? 'A' : i === 1 ? 'B' : 'C'),
+        label: k,
+        festivals: normalizeFestivals(data[k]),
+      })),
+      closing: data.closing || data.summary || null,
+    }
+  }
+
+  return null
+}
+
+function normalizeFestivals(arr) {
+  return (arr || []).map(f => {
+    // Collect extra fields into tips
+    const knownKeys = new Set(['name', 'location', 'reason', 'tips', 'submit_by', 'festival_date', 'tier'])
+    const extraTips = Object.entries(f)
+      .filter(([k, v]) => !knownKeys.has(k) && v !== null && v !== undefined && v !== '')
+      .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v}`)
+    return {
+      name:          f.name         || 'Unknown Festival',
+      location:      f.location     || '',
+      reason:        f.reason       || f.description || f.why || '',
+      tips:          [...(f.tips || []), ...extraTips],
+      submit_by:     f.submit_by    || f.deadline     || f.submission_deadline || null,
+      festival_date: f.festival_date || f.festival    || f.screening_date      || null,
+    }
+  })
+}
+
 function parseStrategy(text) {
   const fenced = text.match(/```(?:json)?\s*([\s\S]+?)```/)
   const raw    = fenced ? fenced[1].trim() : null
-  const bare   = !raw ? text.match(/(\{[\s\S]*"type"\s*:\s*"strategy"[\s\S]*\})/) : null
+  const bare   = !raw ? text.match(/(\{[\s\S]*?\})(?:\s*$)/m) : null
   const candidate = raw || (bare && bare[1])
   if (!candidate) return null
   try {
     const data = JSON.parse(candidate)
-    if (data.type === 'strategy' && Array.isArray(data.tiers)) return data
-    return null
+    return normalizeToStrategy(data)
   } catch { return null }
 }
 
