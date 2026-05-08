@@ -64,7 +64,7 @@ function KeyScreen({ onReady }) {
   // If an env var key is present, skip this screen entirely
   useEffect(() => {
     const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-    if (envKey?.startsWith('sk-')) onReady(envKey)
+    if (envKey) onReady(envKey)
   }, [onReady])
 
   function submit() {
