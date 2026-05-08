@@ -1,0 +1,8 @@
+{
+  "name": "laurelnew",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd laurel-may && npm install && npm run build"
+  }
+}
