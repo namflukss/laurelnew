@@ -5,7 +5,9 @@ import styles from './Laurel.module.css'
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Laurel, an expert AI film festival strategy agent. You speak like a seasoned festival programmer who genuinely loves cinema — warm, direct, and specific.
+const SYSTEM_PROMPT = `You are Laurel — a top-tier film distribution and festival strategy agent with 20+ years of experience as a festival programmer, acquisitions executive, and distribution consultant. You have worked with Sundance, A24, Magnolia Pictures, and leading international sales agents. You know which programmers favor which aesthetics, which festivals are genuinely worth the submission fee, and how to build a circuit that leads to real distribution outcomes.
+
+You speak like the most trusted person in the filmmaker's corner — warm, direct, specific, and honest. You never give generic advice. You reference real past selections, real programmers, real market dynamics.
 
 SPEED IS KEY: Build the strategy as fast as possible. If the first message gives you format + theme/subject + any goal, go straight to the strategy. Ask ONE follow-up question only if a critical piece is truly missing (e.g. short vs feature, doc vs fiction). Never ask more than one question before giving the strategy.
 
@@ -23,7 +25,7 @@ Write one short warm sentence, then immediately output a JSON code block. No ext
         {
           "name": "Festival Name",
           "location": "City, Country",
-          "reason": "Specific reason this festival fits this particular film.",
+          "reason": "Specific reason this festival fits this particular film — reference past selections or programmers.",
           "tips": ["Key deadline or submission tip", "Premiere strategy note"]
         }
       ]
@@ -39,7 +41,7 @@ Write one short warm sentence, then immediately output a JSON code block. No ext
       "festivals": []
     }
   ],
-  "closing": "One honest sentence on timing, premiere strategy, or budget."
+  "closing": "One honest sentence on timing, premiere strategy, or distribution outlook."
 }
 \`\`\`
 
@@ -47,8 +49,9 @@ TIER RULES:
 - TIER A: Only Sundance, TIFF, Cannes, Berlin, Venice, Tribeca, SXSW, Hot Docs, Clermont-Ferrand etc. — only if genuinely appropriate
 - TIER B: Palm Springs, AFI Fest, True/False, Sheffield, Edinburgh, etc.
 - TIER C: Niche, genre, or regional festivals that are a strong fit
-- Include 1–3 festivals per tier. Omit a tier entirely if it doesn't apply (remove it from the array).
-- Be specific about WHY each festival fits THIS film. Never give generic advice.`
+- Include 1–3 festivals per tier. Omit a tier entirely if it doesn't apply.
+- Be specific about WHY each festival fits THIS film. Reference actual past selections when possible.
+- Always factor in distribution potential, premiere strategy, and real career outcomes.`
 
 // ─── Festival Data ────────────────────────────────────────────────────────────
 
@@ -78,9 +81,181 @@ const FILTERS = ['All', 'Feature', 'Short', 'Doc', 'Animation']
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STARTERS = [
-  'My film is a 12-minute drama about a lonely girl. Just finished editing.',
-  'I have a feature documentary about climate refugees, 87 minutes. Aiming for Sundance.',
-  'Made a 7-min experimental animation. No dialogue. What festivals fit?',
+  {
+    label: 'Festival DNA Match',
+    desc: 'Find 12 best-fit festivals across 4 tiers',
+    template:
+`You are an expert film festival strategist. I need you to analyze my film and find the best-fit festivals.
+
+My film details:
+- Title: [TITLE]
+- Format: [Short / Feature / Documentary / Experimental]
+- Genre: [e.g., Psychological thriller / Coming-of-age drama]
+- Logline: [1-2 sentence pitch]
+- Runtime: [X minutes]
+- Country of origin: [COUNTRY]
+- Language: [LANGUAGE]
+- Budget range: [Micro / Indie / Mid-range]
+- Premiere status: [World premiere intact / Already screened at...]
+
+Based on this DNA, identify 12 festivals across 4 tiers (Prestige, High ROI, Niche/Genre, Oscar-qualifying) that have historically programmed films with similar tone, subject matter, and aesthetic. For each festival explain WHY it's a match — reference actual past selections that resemble my film.`,
+  },
+  {
+    label: 'Premiere Protection',
+    desc: 'Assess & protect your world premiere status',
+    template:
+`You are a senior festival strategist and I need to protect my world premiere status.
+
+My film situation:
+- Current status: [Has never screened publicly / Screened at: ...]
+- Password-protected Vimeo links shared: [Yes — sent to X people / No]
+- Industry screenings held: [Yes / No]
+- Online presence: [Trailer only / Full film clip shared / Nothing online]
+- Target festivals: [List your dream festivals here]
+- Timeline: [When do you hope to premiere?]
+
+Assess my current premiere status accurately. Tell me: (1) what premiere status I retain, (2) what risks I need to address immediately, (3) which of my target festivals require which premiere tier, and (4) a precise action plan to protect or recover my premiere window.`,
+  },
+  {
+    label: 'Budget Strategy',
+    desc: 'Highest ROI submission plan for your budget',
+    template:
+`You are a film festival submission budget strategist. Help me build the highest ROI submission plan.
+
+My situation:
+- Total submission budget: $[AMOUNT]
+- Film format: [Short / Feature / Documentary]
+- Film genre: [GENRE]
+- Career goal: [Distribution deal / Career launch / Awards / Audience building]
+- Timeline: Submissions starting [MONTH] targeting premiere in [MONTH/YEAR]
+- Country of origin: [COUNTRY] (for fee waiver eligibility)
+- I already plan to submit to: [list any committed submissions]
+
+Create a numbered submission plan that: (1) maximizes career impact per dollar, (2) flags all early-bird deadlines that save 30-50% on fees, (3) identifies fee waivers I qualify for, (4) explicitly marks any submission where the fee exceeds likely career return as HIGH RISK, and (5) gives a final tally against my budget.`,
+  },
+  {
+    label: 'Niche & Genre Fit',
+    desc: 'Genre, identity & community-based festivals',
+    template:
+`You are a film festival niche specialist. My film belongs to one or more specific communities and I need to find the best genre and identity-based festivals.
+
+My film's specific attributes:
+- Primary genre: [e.g., Horror / Sci-Fi / LGBTQ+ / Documentary / Animation]
+- Secondary themes: [e.g., Immigration / Mental health / Environmental / War]
+- Cultural identity: [e.g., Israeli / African-American / Latin American / Asian diaspora]
+- Director background: [e.g., First-time female director / Student / Under 30]
+- Subject matter community: [Who is this film FOR?]
+- Geographic flexibility: [Willing to travel to? Budget for travel?]
+
+Find me 10 festivals where this film fits culturally, thematically, and communally — beyond the mainstream circuit. For each, describe: (1) the festival's core identity, (2) why my film belongs there, (3) typical acceptance rates if known, (4) community networking value, and (5) whether it is Oscar-qualifying.`,
+  },
+  {
+    label: 'Oscar Qualification',
+    desc: 'Precise roadmap to Academy eligibility',
+    template:
+`You are an expert in Academy Award qualification strategy. I need a precise roadmap to make my film Oscar-eligible.
+
+My film details:
+- Format: [Short narrative / Short documentary / Short animation / Feature documentary]
+- Runtime: [EXACT runtime — this is critical for Oscar rules]
+- Current festival selections: [List any, or 'none yet']
+- Target Oscar year: [20XX ceremony, films qualifying in 20XX-20XX]
+- Country of origin: [COUNTRY]
+- Am I targeting: [Best Short Film / Best Documentary Short / Best Documentary Feature / Best International Film]
+- Budget for qualification path: $[AMOUNT]
+
+Walk me through: (1) the exact Academy rules for my category, (2) the qualifying festivals I need to WIN (not just screen at) for automatic qualification, (3) the theatrical run alternative path if festival route fails, (4) a realistic probability assessment, and (5) a month-by-month action calendar.`,
+  },
+  {
+    label: 'Write My Materials',
+    desc: 'Logline, synopsis & director\'s statement',
+    template:
+`You are a professional film festival submission writer. Write all required submission materials for my film.
+
+Film details:
+- Title: [TITLE]
+- Director: [NAME]
+- Format: [Short / Feature / Documentary]
+- Genre: [GENRE]
+- Runtime: [X minutes]
+- Full plot summary (including ending — for internal use only): [DESCRIBE THE COMPLETE STORY]
+- Director's personal connection: [Why did YOU make this film?]
+- Production context: [Where was it shot, under what circumstances?]
+- Themes and subtext: [What is it really about beneath the surface?]
+- Tone references: [Films or directors it resembles in feel]
+
+Please write: (1) a 1-sentence logline, (2) a 75-word short synopsis (no spoilers), (3) a 300-word long synopsis (full arc, for programmers), (4) a 280-word director's statement (personal, specific, avoids clichés), and (5) 3 alternate logline options.`,
+  },
+  {
+    label: 'Submission Calendar',
+    desc: 'Month-by-month 12-month deadline plan',
+    template:
+`You are a film festival calendar strategist. Build me a complete submission calendar for the next 12 months.
+
+My situation:
+- Film will be ready to submit: [MONTH/YEAR]
+- Target premiere: [MONTH/YEAR range]
+- My target festival list: [Paste your list here — from DNA Matcher output]
+- Submission budget: $[AMOUNT]
+- Priority festivals (must submit): [List 3-5 must-submits]
+
+Create a month-by-month calendar that shows: (1) all early bird deadlines for my target festivals — sorted chronologically, (2) which festivals require specific materials by which dates, (3) a 'submit this month' checklist for each month, (4) fee totals by month to help with cash flow planning, and (5) red flag alerts for any festival where I am dangerously close to missing an early deadline.`,
+  },
+  {
+    label: 'Submission Diagnosis',
+    desc: 'Honest audit of why rejections are happening',
+    template:
+`You are a candid film festival consultant. I've been submitting my film with limited success and need an honest diagnosis.
+
+My submission history:
+- Film format and genre: [FORMAT / GENRE]
+- Total submissions: [NUMBER]
+- Total selections: [NUMBER]
+- Rejections from: [List notable rejections]
+- Acceptances from: [List selections so far]
+- My current synopsis/logline: [PASTE TEXT]
+- My current submission strategy: [How are you choosing which festivals to submit to?]
+- Budget spent so far: $[AMOUNT]
+- Premiere status now: [What remains after current run?]
+
+Be brutally honest. Analyze: (1) whether I am submitting to appropriate-tier festivals for my film, (2) whether my logline and synopsis are likely failing me, (3) whether my premiere strategy has been optimal, (4) whether my budget allocation has been smart, and (5) give me 3 specific corrective actions to improve my acceptance rate.`,
+  },
+  {
+    label: 'Post-Premiere Circuit',
+    desc: 'Maximize the run after your world premiere',
+    template:
+`You are a film circuit strategist specializing in post-premiere runs. My film has had its world premiere and I need to maximize what's left.
+
+My current situation:
+- Film title and format: [TITLE / SHORT/FEATURE/DOC]
+- World premiere was at: [FESTIVAL, MONTH/YEAR]
+- Other selections so far: [List all]
+- Awards won: [List or 'none yet']
+- Remaining premiere status: [International / North American / Regional — what's left?]
+- Distribution status: [Acquired / In talks / Not yet]
+- Online release plans: [VOD / Streaming / None planned yet]
+- My remaining circuit goal: [More awards / Wider audiences / Industry visibility / All of the above]
+- Budget remaining for submissions: $[AMOUNT]
+
+Design my post-premiere circuit strategy: (1) which major fests still accept non-world premieres that I should target, (2) how to use remaining premiere status strategically, (3) when to start planning my online/VOD release given festival norms, (4) which awards circuits I should actively pursue, and (5) a phased 6-month post-premiere roadmap.`,
+  },
+  {
+    label: 'International Strategy',
+    desc: 'Co-production, cultural funding & global eligibility',
+    template:
+`You are an international film strategy consultant specializing in co-production agreements and cultural funding pathways. I want to understand what festival and funding advantages my film's production background unlocks.
+
+My film's production background:
+- Country of production: [PRIMARY COUNTRY]
+- Co-production countries (if any): [COUNTRIES]
+- Key funding sources: [National film fund / Broadcaster / Private / Mixed]
+- Director nationality: [NATIONALITY]
+- Language of film: [LANGUAGE]
+- Has cultural certification: [Yes — from which body / No / Unknown]
+- Cast and crew nationality breakdown: [DESCRIPTION]
+
+Analyze: (1) which national and cultural festival sections I am eligible for that I might not know about, (2) which regional and language-based festivals I qualify for internationally, (3) whether my co-production structure gives me premiere eligibility in multiple countries, (4) national funding bodies that offer festival submission support grants I may be eligible for, and (5) any Oscar or BAFTA eligibility implications from my production structure.`,
+  },
 ]
 
 // ─── Skills / Commands ────────────────────────────────────────────────────────
@@ -603,10 +778,20 @@ export default function Laurel() {
           <div className={styles.welcome}>
             <div className={styles.welcomeMark}><LaurelMark size={48} /></div>
             <h2 className={styles.welcomeTitle}>Tell me about your film.</h2>
-            <p className={styles.welcomeBody}>I'll build your complete festival submission strategy.</p>
+            <p className={styles.welcomeBody}>Choose a strategy template or describe your film directly.</p>
             <div className={styles.starters}>
               {STARTERS.map((s, i) => (
-                <button key={i} className={styles.starterBtn} onClick={() => send(s)}>{s}</button>
+                <button
+                  key={i}
+                  className={styles.starterBtn}
+                  onClick={() => {
+                    setInput(s.template)
+                    setTimeout(() => textareaRef.current?.focus(), 50)
+                  }}
+                >
+                  <span className={styles.starterLabel}>{s.label}</span>
+                  <span className={styles.starterDesc}>{s.desc}</span>
+                </button>
               ))}
             </div>
           </div>
