@@ -455,6 +455,112 @@
   animation: bounce 1.4s ease-in-out infinite;
 }
 
+/* ── Command Palette ────────────────────────────────────────────────────────── */
+.inputOuter {
+  position: relative;
+}
+
+.commandPalette {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0; right: 0;
+  background: rgba(10, 9, 7, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(201,168,76,0.2);
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(201,168,76,0.05) inset;
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.commandHeader {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid rgba(201,168,76,0.08);
+}
+
+.commandItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.commandItem:hover  { background: rgba(201,168,76,0.05); }
+
+.commandActive {
+  background: rgba(201,168,76,0.08);
+}
+
+.commandIcon {
+  color: var(--gold-dim);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.commandLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+.commandPrefix {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--gold-dim);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.commandDesc {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cmdTrigger {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 7px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s;
+  border-radius: 2px;
+}
+
+.cmdTrigger:hover {
+  color: var(--gold-dim);
+  border-color: var(--border);
+}
+
+.cmdTriggerActive {
+  color: var(--gold);
+  border-color: rgba(201,168,76,0.35);
+  background: rgba(201,168,76,0.07);
+}
+
 /* ── Input ──────────────────────────────────────────────────────────────────── */
 .inputArea {
   padding: 14px 24px 20px;

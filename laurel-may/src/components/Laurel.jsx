@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Sparkles, CalendarDays, Layers, Wallet, Command } from 'lucide-react'
 import styles from './Laurel.module.css'
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -79,6 +81,36 @@ const STARTERS = [
   'My film is a 12-minute drama about a lonely girl. Just finished editing.',
   'I have a feature documentary about climate refugees, 87 minutes. Aiming for Sundance.',
   'Made a 7-min experimental animation. No dialogue. What festivals fit?',
+]
+
+// ─── Skills / Commands ────────────────────────────────────────────────────────
+// Add your skills here — each one appears in the /command palette.
+
+const SKILLS = [
+  {
+    icon: <Sparkles size={14} />,
+    label: 'Full Strategy',
+    description: 'Build a complete tiered festival submission strategy',
+    prefix: '/strategy',
+  },
+  {
+    icon: <Layers size={14} />,
+    label: 'Tier Breakdown',
+    description: 'Which festival tiers (A/B/C) are realistic for my film',
+    prefix: '/tiers',
+  },
+  {
+    icon: <CalendarDays size={14} />,
+    label: 'Deadlines',
+    description: 'Key upcoming submission windows to hit this cycle',
+    prefix: '/deadlines',
+  },
+  {
+    icon: <Wallet size={14} />,
+    label: 'Budget Path',
+    description: 'High-impact festivals for a limited submission budget',
+    prefix: '/budget',
+  },
 ]
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
@@ -207,6 +239,47 @@ function StrategyMessage({ text }) {
       })}
       {strategy.closing && <p className={styles.strategyClosing}>{strategy.closing}</p>}
     </div>
+  )
+}
+
+// ─── Command Palette ─────────────────────────────────────────────────────────
+
+function CommandPalette({ query, active, onSelect, onClose, paletteRef }) {
+  const filtered = SKILLS.filter(s =>
+    s.prefix.startsWith(query.length > 1 ? query : '/') ||
+    s.label.toLowerCase().includes(query.slice(1).toLowerCase())
+  )
+
+  if (filtered.length === 0) return null
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        ref={paletteRef}
+        className={styles.commandPalette}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 6 }}
+        transition={{ duration: 0.14, ease: 'easeOut' }}
+      >
+        <div className={styles.commandHeader}>Commands</div>
+        {filtered.map((skill, i) => (
+          <motion.button
+            key={skill.prefix}
+            className={`${styles.commandItem} ${active === i ? styles.commandActive : ''}`}
+            onClick={() => onSelect(skill)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: i * 0.03 }}
+          >
+            <span className={styles.commandIcon}>{skill.icon}</span>
+            <span className={styles.commandLabel}>{skill.label}</span>
+            <span className={styles.commandPrefix}>{skill.prefix}</span>
+            <span className={styles.commandDesc}>{skill.description}</span>
+          </motion.button>
+        ))}
+      </motion.div>
+    </AnimatePresence>
   )
 }
 
@@ -369,15 +442,18 @@ function KeyScreen({ onReady, onBack }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Laurel() {
-  const [mode,     setMode]     = useState(null) // null | 'chat' | 'explore'
-  const [apiKey,   setApiKey]   = useState(null)
-  const [messages, setMessages] = useState([])
-  const [input,    setInput]    = useState('')
-  const [loading,  setLoading]  = useState(false)
+  const [mode,             setMode]             = useState(null)
+  const [apiKey,           setApiKey]           = useState(null)
+  const [messages,         setMessages]         = useState([])
+  const [input,            setInput]            = useState('')
+  const [loading,          setLoading]          = useState(false)
+  const [showCommands,     setShowCommands]     = useState(false)
+  const [activeCommand,    setActiveCommand]    = useState(-1)
 
   const history        = useRef([])
   const messagesEndRef = useRef(null)
   const textareaRef    = useRef(null)
+  const paletteRef     = useRef(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -390,7 +466,58 @@ export default function Laurel() {
     el.style.height = `${el.scrollHeight}px`
   }, [input])
 
+  // Show command palette when input starts with /
+  useEffect(() => {
+    if (input.startsWith('/') && !input.includes(' ')) {
+      setShowCommands(true)
+      const idx = SKILLS.findIndex(s => s.prefix.startsWith(input))
+      setActiveCommand(idx >= 0 ? idx : 0)
+    } else {
+      setShowCommands(false)
+      setActiveCommand(-1)
+    }
+  }, [input])
+
+  // Close palette on outside click
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (paletteRef.current && !paletteRef.current.contains(e.target) &&
+          !textareaRef.current?.contains(e.target)) {
+        setShowCommands(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  function selectCommand(skill) {
+    setInput(skill.prefix + ' ')
+    setShowCommands(false)
+    setActiveCommand(-1)
+    textareaRef.current?.focus()
+  }
+
   function handleKeyDown(e) {
+    if (showCommands) {
+      const filtered = SKILLS.filter(s =>
+        s.prefix.startsWith(input.length > 1 ? input : '/') ||
+        s.label.toLowerCase().includes(input.slice(1).toLowerCase())
+      )
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveCommand(p => (p < filtered.length - 1 ? p + 1 : 0))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveCommand(p => (p > 0 ? p - 1 : filtered.length - 1))
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault()
+        if (activeCommand >= 0 && filtered[activeCommand]) selectCommand(filtered[activeCommand])
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowCommands(false)
+      }
+      return
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       send(input)
@@ -513,24 +640,42 @@ export default function Laurel() {
       </div>
 
       <div className={styles.inputArea}>
-        <div className={styles.inputWrap}>
-          <textarea
-            ref={textareaRef}
-            className={styles.textarea}
-            placeholder="Tell me about your film…"
-            value={input}
-            rows={1}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <button
-            className={styles.sendBtn}
-            onClick={() => send(input)}
-            disabled={loading || !input.trim()}
-            aria-label="Send"
-          >↑</button>
+        <div className={styles.inputOuter}>
+          {showCommands && (
+            <CommandPalette
+              query={input}
+              active={activeCommand}
+              onSelect={selectCommand}
+              onClose={() => setShowCommands(false)}
+              paletteRef={paletteRef}
+            />
+          )}
+          <div className={styles.inputWrap}>
+            <button
+              className={`${styles.cmdTrigger} ${showCommands ? styles.cmdTriggerActive : ''}`}
+              onClick={() => { setInput('/'); setShowCommands(true); textareaRef.current?.focus() }}
+              title="Commands"
+            >
+              <Command size={13} />
+            </button>
+            <textarea
+              ref={textareaRef}
+              className={styles.textarea}
+              placeholder="Tell me about your film… or type / for commands"
+              value={input}
+              rows={1}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            <button
+              className={styles.sendBtn}
+              onClick={() => send(input)}
+              disabled={loading || !input.trim()}
+              aria-label="Send"
+            >↑</button>
+          </div>
         </div>
-        <p className={styles.inputHint}>Enter to send · Shift+Enter for new line</p>
+        <p className={styles.inputHint}>Enter to send · Shift+Enter for new line · / for commands</p>
       </div>
     </div>
   )
