@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, CalendarDays, Layers, Wallet, Command } from 'lucide-react'
+import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid, Calendar, GitCommitVertical } from 'lucide-react'
 import styles from './Laurel.module.css'
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -26,7 +26,9 @@ Write one short warm sentence, then immediately output a JSON code block. No ext
           "name": "Festival Name",
           "location": "City, Country",
           "reason": "Specific reason this festival fits this particular film — reference past selections or programmers.",
-          "tips": ["Key deadline or submission tip", "Premiere strategy note"]
+          "tips": ["Key deadline or submission tip", "Premiere strategy note"],
+          "submit_by": "Sep 2025",
+          "festival_date": "Jan 2026"
         }
       ]
     },
@@ -44,6 +46,8 @@ Write one short warm sentence, then immediately output a JSON code block. No ext
   "closing": "One honest sentence on timing, premiere strategy, or distribution outlook."
 }
 \`\`\`
+
+IMPORTANT: Always include realistic submit_by and festival_date values (format: "Mon YYYY") for every festival. These power the calendar and timeline views.
 
 TIER RULES:
 - TIER A: Only Sundance, TIFF, Cannes, Berlin, Venice, Tribeca, SXSW, Hot Docs, Clermont-Ferrand etc. — only if genuinely appropriate
@@ -360,6 +364,284 @@ function getIntro(text) {
   return idx > 0 ? text.slice(0, idx).trim() : null
 }
 
+// ─── Month utilities ─────────────────────────────────────────────────────────
+
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MONTH_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+function parseMonthYear(str) {
+  if (!str) return null
+  const m = str.match(/([A-Za-z]+)\s+(\d{4})/)
+  if (!m) return null
+  const idx = MONTH_ABBR.findIndex(a => a.toLowerCase() === m[1].toLowerCase().slice(0, 3))
+  const year = parseInt(m[2])
+  if (idx === -1 || isNaN(year)) return null
+  return { month: idx, year, sortKey: year * 12 + idx }
+}
+
+function flatFestivals(strategy) {
+  return strategy.tiers.flatMap(t =>
+    (t.festivals || []).map(f => ({ ...f, tier: t.tier, tierLabel: t.label }))
+  )
+}
+
+function groupByDeadline(festivals) {
+  const map = {}
+  festivals.forEach(f => {
+    const p = parseMonthYear(f.submit_by)
+    if (!p) return
+    const k = `${p.year}-${p.month}`
+    if (!map[k]) map[k] = { ...p, key: k, festivals: [] }
+    map[k].festivals.push(f)
+  })
+  return Object.values(map).sort((a, b) => a.sortKey - b.sortKey)
+}
+
+// ─── Strategy Dashboard ───────────────────────────────────────────────────────
+
+const VIEWS = [
+  { id: 'grid',     label: 'Grid',     Icon: LayoutGrid },
+  { id: 'calendar', label: 'Calendar', Icon: Calendar },
+  { id: 'timeline', label: 'Timeline', Icon: GitCommitVertical },
+]
+
+function DashFestCard({ festival, tier }) {
+  const tierCls = { A: styles.dashCardA, B: styles.dashCardB, C: styles.dashCardC }
+  return (
+    <div className={`${styles.dashFestCard} ${tierCls[tier] || ''}`}>
+      <div className={styles.dashCardHead}>
+        <div>
+          <div className={styles.dashCardName}>{festival.name}</div>
+          {festival.location && <div className={styles.dashCardLoc}>{festival.location}</div>}
+        </div>
+        {(festival.submit_by || festival.festival_date) && (
+          <div className={styles.dashCardDates}>
+            {festival.submit_by && (
+              <div className={styles.dashDateRow}>
+                <span className={styles.dashDateLabel}>Submit</span>
+                <span className={styles.dashDateVal}>{festival.submit_by}</span>
+              </div>
+            )}
+            {festival.festival_date && (
+              <div className={styles.dashDateRow}>
+                <span className={styles.dashDateLabel}>Screens</span>
+                <span className={styles.dashDateVal}>{festival.festival_date}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <p className={styles.dashCardReason}>{festival.reason}</p>
+      {festival.tips?.length > 0 && (
+        <ul className={styles.dashCardTips}>
+          {festival.tips.map((t, i) => <li key={i}>{t}</li>)}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function GridView({ strategy }) {
+  return (
+    <div className={styles.gridView}>
+      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
+        const meta = TIER_META[tier.tier] || { label: tier.label, cls: styles.tierC }
+        return (
+          <div key={tier.tier} className={styles.tierSection}>
+            <div className={`${styles.tierHeader} ${meta.cls}`}>
+              <span className={styles.tierBadge}>{tier.tier}</span>
+              <span className={styles.tierLabel}>{tier.label || meta.label}</span>
+              <span className={styles.tierCount}>{tier.festivals.length} festival{tier.festivals.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div className={styles.dashFestGrid}>
+              {tier.festivals.map((f, i) => <DashFestCard key={i} festival={f} tier={tier.tier} />)}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function CalendarView({ strategy }) {
+  const all    = flatFestivals(strategy)
+  const groups = groupByDeadline(all)
+
+  if (groups.length === 0) return (
+    <div className={styles.emptyView}>
+      <p>No deadline dates in this strategy.</p>
+      <p>Ask Laurel to regenerate with submission windows included.</p>
+    </div>
+  )
+
+  const tierColor = { A: styles.calDotA, B: styles.calDotB, C: styles.calDotC }
+
+  return (
+    <div className={styles.calView}>
+      {groups.map(g => (
+        <motion.div
+          key={g.key}
+          className={styles.calMonth}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className={styles.calMonthHeader}>
+            <span className={styles.calMonthName}>{MONTH_FULL[g.month]}</span>
+            <span className={styles.calMonthYear}>{g.year}</span>
+            <span className={styles.calMonthCount}>{g.festivals.length} deadline{g.festivals.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className={styles.calFests}>
+            {g.festivals.map((f, i) => (
+              <div key={i} className={styles.calFestRow}>
+                <span className={`${styles.calDot} ${tierColor[f.tier] || ''}`} />
+                <div className={styles.calFestInfo}>
+                  <span className={styles.calFestName}>{f.name}</span>
+                  <span className={styles.calFestLoc}>{f.location}</span>
+                </div>
+                <div className={styles.calFestMeta}>
+                  <span className={`${styles.calTierBadge} ${styles[`calTier${f.tier}`]}`}>{f.tier}</span>
+                  {f.festival_date && <span className={styles.calScreenDate}>screens {f.festival_date}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+function TimelineView({ strategy }) {
+  const all    = flatFestivals(strategy)
+  const sorted = all
+    .map(f => ({ ...f, parsed: parseMonthYear(f.submit_by) }))
+    .filter(f => f.parsed)
+    .sort((a, b) => a.parsed.sortKey - b.parsed.sortKey)
+
+  const noDate = all.filter(f => !parseMonthYear(f.submit_by))
+
+  if (sorted.length === 0) return (
+    <div className={styles.emptyView}>
+      <p>No deadline dates available for timeline view.</p>
+    </div>
+  )
+
+  const tierCls  = { A: styles.tlCardA,  B: styles.tlCardB,  C: styles.tlCardC  }
+  const dotCls   = { A: styles.tlDotA,   B: styles.tlDotB,   C: styles.tlDotC   }
+  const badgeCls = { A: styles.tlBadgeA, B: styles.tlBadgeB, C: styles.tlBadgeC }
+
+  return (
+    <div className={styles.tlView}>
+      {sorted.map((f, i) => {
+        const showMonth = i === 0 ||
+          sorted[i - 1].parsed.sortKey !== f.parsed.sortKey
+        return (
+          <div key={i} className={styles.tlItem}>
+            {showMonth && (
+              <div className={styles.tlMonthMarker}>
+                <span className={styles.tlMonthLabel}>
+                  {MONTH_ABBR[f.parsed.month]} {f.parsed.year}
+                </span>
+                <div className={styles.tlMonthLine} />
+              </div>
+            )}
+            <div className={styles.tlRow}>
+              <div className={styles.tlTrackCol}>
+                <div className={`${styles.tlDot} ${dotCls[f.tier] || ''}`} />
+                {i < sorted.length - 1 && <div className={styles.tlConnector} />}
+              </div>
+              <motion.div
+                className={`${styles.tlCard} ${tierCls[f.tier] || ''}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <div className={styles.tlCardHead}>
+                  <span className={`${styles.tlBadge} ${badgeCls[f.tier] || ''}`}>{f.tier}</span>
+                  <span className={styles.tlCardName}>{f.name}</span>
+                  <span className={styles.tlCardLoc}>{f.location}</span>
+                </div>
+                <p className={styles.tlCardReason}>{f.reason}</p>
+                {f.festival_date && (
+                  <div className={styles.tlCardFestDate}>Festival: {f.festival_date}</div>
+                )}
+              </motion.div>
+            </div>
+          </div>
+        )
+      })}
+
+      {noDate.length > 0 && (
+        <div className={styles.tlNoDate}>
+          <div className={styles.tlNoDateLabel}>No deadline specified</div>
+          {noDate.map((f, i) => (
+            <div key={i} className={`${styles.tlCard} ${tierCls[f.tier] || ''}`} style={{ marginBottom: 8 }}>
+              <div className={styles.tlCardHead}>
+                <span className={`${styles.tlBadge} ${badgeCls[f.tier] || ''}`}>{f.tier}</span>
+                <span className={styles.tlCardName}>{f.name}</span>
+                <span className={styles.tlCardLoc}>{f.location}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StrategyDashboard({ strategy, onBack }) {
+  const [view, setView] = useState('grid')
+  const total = flatFestivals(strategy).length
+
+  return (
+    <div className={styles.root}>
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <button className={styles.backBtn} onClick={onBack}>← Chat</button>
+          <div className={styles.headerDivider} />
+          <div>
+            <div className={styles.headerTitle}>Your Strategy</div>
+            <div className={styles.headerSub}>{total} festival{total !== 1 ? 's' : ''} · {strategy.tiers.filter(t => t.festivals?.length > 0).length} tiers</div>
+          </div>
+        </div>
+        <div className={styles.dashTabs}>
+          {VIEWS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`${styles.dashTab} ${view === id ? styles.dashTabActive : ''}`}
+              onClick={() => setView(id)}
+            >
+              <Icon size={12} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {strategy.closing && (
+        <div className={styles.dashClosingBanner}>{strategy.closing}</div>
+      )}
+
+      <div className={styles.dashContent}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={view}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            style={{ height: '100%' }}
+          >
+            {view === 'grid'     && <GridView     strategy={strategy} />}
+            {view === 'calendar' && <CalendarView strategy={strategy} />}
+            {view === 'timeline' && <TimelineView strategy={strategy} />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
 // ─── Strategy Cards ───────────────────────────────────────────────────────────
 
 const TIER_META = {
@@ -385,7 +667,7 @@ function FestivalCard({ festival }) {
   )
 }
 
-function StrategyMessage({ text }) {
+function StrategyMessage({ text, onViewStrategy }) {
   const strategy = parseStrategy(text)
   const intro    = getIntro(text)
 
@@ -394,6 +676,8 @@ function StrategyMessage({ text }) {
       {renderMarkdown(text)}
     </div>
   )
+
+  const total = flatFestivals(strategy).length
 
   return (
     <div className={styles.strategyBlock}>
@@ -413,6 +697,19 @@ function StrategyMessage({ text }) {
         )
       })}
       {strategy.closing && <p className={styles.strategyClosing}>{strategy.closing}</p>}
+      <motion.button
+        className={styles.viewStrategyBtn}
+        onClick={() => onViewStrategy(strategy)}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+      >
+        <LayoutGrid size={13} />
+        View Full Strategy — {total} festivals
+        <span className={styles.viewStrategyArrow}>→</span>
+      </motion.button>
     </div>
   )
 }
@@ -619,6 +916,7 @@ function KeyScreen({ onReady, onBack }) {
 export default function Laurel() {
   const [mode,             setMode]             = useState(null)
   const [apiKey,           setApiKey]           = useState(null)
+  const [activeStrategy,   setActiveStrategy]   = useState(null)
   const [messages,         setMessages]         = useState([])
   const [input,            setInput]            = useState('')
   const [loading,          setLoading]          = useState(false)
@@ -752,6 +1050,11 @@ export default function Laurel() {
   // Explore
   if (mode === 'explore') return <ExploreFestivals onBack={() => setMode(null)} />
 
+  // Strategy dashboard
+  if (mode === 'strategy' && activeStrategy) return (
+    <StrategyDashboard strategy={activeStrategy} onBack={() => setMode('chat')} />
+  )
+
   // Chat: key screen if no key
   if (!apiKey) return <KeyScreen onReady={setApiKey} onBack={() => setMode(null)} />
 
@@ -807,7 +1110,10 @@ export default function Laurel() {
           return (
             <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
               <div className={styles.msgMeta}>Laurel</div>
-              <StrategyMessage text={m.text} />
+              <StrategyMessage
+                text={m.text}
+                onViewStrategy={s => { setActiveStrategy(s); setMode('strategy') }}
+              />
             </div>
           )
         })}

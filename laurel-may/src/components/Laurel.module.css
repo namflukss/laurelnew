@@ -653,6 +653,512 @@
   opacity: 0.7;
 }
 
+/* ── View Strategy Button ───────────────────────────────────────────────────── */
+.viewStrategyBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: rgba(201,168,76,0.08);
+  border: 1px solid rgba(201,168,76,0.35);
+  color: var(--gold);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 1px;
+  width: 100%;
+  justify-content: center;
+}
+
+.viewStrategyBtn:hover {
+  background: rgba(201,168,76,0.14);
+  border-color: var(--gold);
+  box-shadow: 0 0 24px rgba(201,168,76,0.12);
+}
+
+.viewStrategyArrow {
+  margin-left: auto;
+  opacity: 0.7;
+}
+
+/* ── Strategy Dashboard ─────────────────────────────────────────────────────── */
+.dashTabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dashTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.18s;
+  border-radius: 1px;
+}
+
+.dashTab:hover { color: var(--text-muted); border-color: var(--border); }
+
+.dashTabActive {
+  background: rgba(201,168,76,0.08);
+  border-color: rgba(201,168,76,0.35);
+  color: var(--gold);
+}
+
+.dashClosingBanner {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-dim);
+  padding: 10px 28px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(201,168,76,0.02);
+  flex-shrink: 0;
+}
+
+.dashContent {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  z-index: 1;
+}
+
+.dashContent::-webkit-scrollbar       { width: 3px; }
+.dashContent::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.12); border-radius: 2px; }
+
+/* ── Grid View ───────────────────────────────────────────────────────────────── */
+.gridView {
+  padding: 28px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.tierCount {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+.dashFestGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.dashFestCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 1px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.dashFestCard:hover { border-color: rgba(201,168,76,0.3); transform: translateY(-1px); }
+
+.dashCardA { border-left: 2px solid rgba(201,168,76,0.5); }
+.dashCardB { border-left: 2px solid rgba(160,128,64,0.4); }
+.dashCardC { border-left: 2px solid rgba(120,100,60,0.3); }
+
+.dashCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dashCardName {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--cream);
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+
+.dashCardLoc {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.dashCardDates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.dashDateRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashDateLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.dashDateVal {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+}
+
+.dashCardReason {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.75;
+  flex: 1;
+}
+
+.dashCardTips {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.dashCardTips li {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  line-height: 1.6;
+  padding-left: 12px;
+  position: relative;
+}
+
+.dashCardTips li::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+  font-size: 11px;
+}
+
+/* ── Calendar View ───────────────────────────────────────────────────────────── */
+.calView {
+  padding: 28px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.calMonth {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.calMonthHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: rgba(201,168,76,0.04);
+  border-bottom: 1px solid var(--border);
+}
+
+.calMonthName {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--cream);
+  letter-spacing: 0.05em;
+}
+
+.calMonthYear {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+}
+
+.calMonthCount {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+.calFests {
+  display: flex;
+  flex-direction: column;
+}
+
+.calFestRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(201,168,76,0.05);
+  transition: background 0.15s;
+}
+
+.calFestRow:last-child { border-bottom: none; }
+.calFestRow:hover      { background: rgba(201,168,76,0.03); }
+
+.calDot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.calDotA { background: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.5); }
+.calDotB { background: #A08040; }
+.calDotC { background: #705830; }
+
+.calFestInfo { flex: 1; }
+
+.calFestName {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 16px;
+  color: var(--cream);
+  display: block;
+}
+
+.calFestLoc {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 2px;
+}
+
+.calFestMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.calTierBadge {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  padding: 2px 6px;
+  border-radius: 1px;
+}
+
+.calTierA { background: rgba(201,168,76,0.18); color: var(--gold); }
+.calTierB { background: rgba(160,128,64,0.15); color: #A08040; }
+.calTierC { background: rgba(120,100,60,0.12); color: #806840; }
+
+.calScreenDate {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+}
+
+/* ── Timeline View ───────────────────────────────────────────────────────────── */
+.tlView {
+  padding: 28px 32px 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tlItem { display: flex; flex-direction: column; }
+
+.tlMonthMarker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  margin-top: 8px;
+}
+
+.tlMonthLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  flex-shrink: 0;
+}
+
+.tlMonthLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.tlRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+
+.tlTrackCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  padding-top: 4px;
+}
+
+.tlDot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid;
+}
+
+.tlDotA { background: rgba(201,168,76,0.2); border-color: var(--gold); }
+.tlDotB { background: rgba(160,128,64,0.2); border-color: #A08040; }
+.tlDotC { background: rgba(120,100,60,0.2); border-color: #706030; }
+
+.tlConnector {
+  width: 1px;
+  flex: 1;
+  min-height: 20px;
+  background: var(--border);
+  margin-top: 4px;
+}
+
+.tlCard {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+  border-radius: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.tlCard:hover { border-color: rgba(201,168,76,0.25); }
+
+.tlCardA { border-left: 2px solid rgba(201,168,76,0.45); }
+.tlCardB { border-left: 2px solid rgba(160,128,64,0.35); }
+.tlCardC { border-left: 2px solid rgba(120,100,60,0.25); }
+
+.tlCardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tlBadge {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  padding: 2px 6px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.tlBadgeA { background: rgba(201,168,76,0.18); color: var(--gold); }
+.tlBadgeB { background: rgba(160,128,64,0.15); color: #A08040; }
+.tlBadgeC { background: rgba(120,100,60,0.12); color: #806840; }
+
+.tlCardName {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  color: var(--cream);
+}
+
+.tlCardLoc {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.tlCardReason {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.tlCardFestDate {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--gold-dim);
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.tlNoDate {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tlNoDateLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────────── */
+.emptyView {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  padding: 40px;
+  text-align: center;
+}
+
+.emptyView p {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  font-style: italic;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+
 /* ── Strategy Cards ─────────────────────────────────────────────────────────── */
 .strategyBlock {
   display: flex;
