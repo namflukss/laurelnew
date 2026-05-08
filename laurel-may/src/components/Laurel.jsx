@@ -841,7 +841,7 @@ function Landing({ onChat, onExplore }) {
     <div className={styles.landing}>
       <div className={styles.landingInner}>
         <div className={styles.landingMark}>
-          <LaurelMark size={64} />
+          <LaurelMark size={80} />
         </div>
         <h1 className={styles.landingTitle}>Laurel</h1>
         <p className={styles.landingSubtitle}>Film Festival Strategy</p>

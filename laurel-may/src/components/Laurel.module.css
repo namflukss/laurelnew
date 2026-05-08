@@ -249,7 +249,7 @@
 
 .welcomeTitle {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 32px;
+  font-size: 44px;
   font-weight: 300;
   background: linear-gradient(135deg, #E2C47A 0%, #C9A84C 70%);
   -webkit-background-clip: text;
@@ -260,10 +260,10 @@
 
 .welcomeBody {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 16px;
+  font-size: 18px;
   font-style: italic;
   color: var(--text-muted);
-  max-width: 360px;
+  max-width: 400px;
   line-height: 1.8;
 }
 
@@ -296,17 +296,17 @@
 
 .starterLabel {
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: #9A8A6A;
   display: block;
 }
 
 .starterDesc {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 13px;
+  font-size: 14px;
   font-style: italic;
-  color: var(--text-dim);
+  color: var(--text-muted);
   display: block;
   line-height: 1.4;
 }
@@ -606,8 +606,8 @@
   border: none;
   outline: none;
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.03em;
+  font-size: 13px;
+  letter-spacing: 0.02em;
   color: var(--text-primary);
   resize: none;
   min-height: 20px;
@@ -787,7 +787,7 @@
 
 .dashCardName {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 400;
   color: var(--cream);
   letter-spacing: 0.03em;
@@ -832,7 +832,7 @@
 
 .dashCardReason {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-muted);
   line-height: 1.75;
   flex: 1;
@@ -1247,7 +1247,7 @@
 
 .festName {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 17px;
+  font-size: 22px;
   font-weight: 400;
   color: var(--cream);
   letter-spacing: 0.04em;
@@ -1264,7 +1264,7 @@
 
 .festReason {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-muted);
   line-height: 1.75;
   flex: 1;
@@ -1350,7 +1350,7 @@
 
 .landingTitle {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 52px;
+  font-size: 72px;
   font-weight: 300;
   background: linear-gradient(135deg, #E2C47A 0%, #C9A84C 60%, #8A6B2A 100%);
   -webkit-background-clip: text;
@@ -1371,12 +1371,12 @@
 
 .landingBody {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 16px;
+  font-size: 19px;
   font-style: italic;
   color: var(--text-muted);
   line-height: 1.75;
   margin-top: 8px;
-  max-width: 340px;
+  max-width: 400px;
 }
 
 .landingBtns {
@@ -1394,18 +1394,18 @@
   justify-content: center;
   gap: 10px;
   font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  padding: 18px 14px;
+  padding: 20px 20px;
   cursor: pointer;
   transition: all 0.25s;
   border-radius: 1px;
 }
 
 .landingBtnPrimary {
-  background: rgba(201,168,76,0.1);
-  border: 1px solid rgba(201,168,76,0.5);
+  background: rgba(201,168,76,0.12);
+  border: 1.5px solid rgba(201,168,76,0.65);
   color: var(--gold);
 }
 
