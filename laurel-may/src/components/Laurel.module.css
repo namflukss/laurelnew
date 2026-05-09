@@ -7,7 +7,7 @@
   --deep:         #0C0B09;
   --surface:      #111009;
   --panel:        #181610;
-  --border:       rgba(201, 168, 76, 0.15);
+  --border:       #2a2719;
   --border-hover: rgba(201, 168, 76, 0.35);
   --text-primary: #EDE8DC;
   --text-muted:   #7A7260;
@@ -775,7 +775,7 @@
 .dashFestCard:hover { border-color: rgba(201,168,76,0.3); transform: translateY(-1px); }
 
 .dashCardA { border-left: 2px solid rgba(201,168,76,0.5); }
-.dashCardB { border-left: 2px solid rgba(160,128,64,0.4); }
+.dashCardB { border-left: 2px solid rgba(107,173,235,0.6); }
 .dashCardC { border-left: 2px solid rgba(120,100,60,0.3); }
 
 .dashCardHead {
@@ -938,7 +938,7 @@
 }
 
 .calDotA { background: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.5); }
-.calDotB { background: #A08040; }
+.calDotB { background: #6badeb; }
 .calDotC { background: #705830; }
 
 .calFestInfo { flex: 1; }
@@ -976,7 +976,7 @@
 }
 
 .calTierA { background: rgba(201,168,76,0.18); color: var(--gold); }
-.calTierB { background: rgba(160,128,64,0.15); color: #A08040; }
+.calTierB { background: rgba(107,173,235,0.15); color: #6badeb; }
 .calTierC { background: rgba(120,100,60,0.12); color: #806840; }
 
 .calScreenDate {
@@ -1042,7 +1042,7 @@
 }
 
 .tlDotA { background: rgba(201,168,76,0.2); border-color: var(--gold); }
-.tlDotB { background: rgba(160,128,64,0.2); border-color: #A08040; }
+.tlDotB { background: rgba(107,173,235,0.2); border-color: #6badeb; }
 .tlDotC { background: rgba(120,100,60,0.2); border-color: #706030; }
 
 .tlConnector {
@@ -1088,7 +1088,7 @@
 }
 
 .tlBadgeA { background: rgba(201,168,76,0.18); color: var(--gold); }
-.tlBadgeB { background: rgba(160,128,64,0.15); color: #A08040; }
+.tlBadgeB { background: rgba(107,173,235,0.15); color: #6badeb; }
 .tlBadgeC { background: rgba(120,100,60,0.12); color: #806840; }
 
 .tlCardName {
@@ -1326,111 +1326,215 @@
 .landing {
   height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  background: radial-gradient(ellipse at 50% 25%, rgba(201,168,76,0.07) 0%, transparent 60%), #0C0B09;
+  flex-direction: column;
+  background: #0c0b09;
+  position: relative;
+  overflow: hidden;
 }
 
-.landingInner {
+.landingNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 64px;
+  height: 64px;
+  border-bottom: 1px solid #2a2719;
+  background: #11100a;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.landingNavLogo {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+
+.landingNavRight {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.landingNavLink {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #7a7355;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0;
+}
+.landingNavLink:hover { color: var(--gold); }
+
+.landingMain {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  position: relative;
+}
+
+.landingLeft {
+  flex: 0 0 55%;
+  padding: 0 0 0 120px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
-  max-width: 420px;
-  width: 100%;
   animation: fadeUp 0.6s ease forwards;
 }
 
-.landingMark {
-  filter: drop-shadow(0 0 24px rgba(201,168,76,0.35));
-  margin-bottom: 8px;
-}
-
 .landingTitle {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 72px;
-  font-weight: 300;
-  background: linear-gradient(135deg, #E2C47A 0%, #C9A84C 60%, #8A6B2A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 0.18em;
+  font-family: 'Tilt Warp', sans-serif;
+  font-size: 96px;
+  color: var(--gold);
   line-height: 1;
+  margin: 0 0 28px;
+  letter-spacing: 0;
 }
 
 .landingSubtitle {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-top: -4px;
+  font-family: 'Inter', sans-serif;
+  font-size: 22px;
+  color: #7a7355;
+  line-height: 1.6;
+  margin: 0 0 20px;
+  font-weight: 400;
 }
 
 .landingBody {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 19px;
-  font-style: italic;
-  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  color: #7a7355;
   line-height: 1.75;
-  margin-top: 8px;
-  max-width: 400px;
+  max-width: 480px;
+  margin: 0 0 36px;
 }
 
 .landingBtns {
   display: flex;
-  gap: 12px;
-  width: 100%;
-  margin-top: 16px;
-}
-
-.landingBtnPrimary,
-.landingBtnSecondary {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  padding: 20px 20px;
-  cursor: pointer;
-  transition: all 0.25s;
-  border-radius: 1px;
+  gap: 16px;
 }
 
 .landingBtnPrimary {
-  background: rgba(201,168,76,0.12);
-  border: 1.5px solid rgba(201,168,76,0.65);
-  color: var(--gold);
+  background: var(--gold);
+  border: none;
+  color: #0c0b09;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 16px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
 }
-
-.landingBtnPrimary:hover {
-  background: rgba(201,168,76,0.16);
-  border-color: var(--gold);
-  box-shadow: 0 0 24px rgba(201,168,76,0.15);
-}
+.landingBtnPrimary:hover { background: #e5b82e; }
 
 .landingBtnSecondary {
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid rgba(201,168,76,0.35);
+  color: var(--gold);
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 16px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
 .landingBtnSecondary:hover {
-  border-color: rgba(201,168,76,0.3);
-  color: var(--text-primary);
-  background: rgba(201,168,76,0.03);
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.05);
 }
 
-.landingBtnIcon {
-  font-size: 12px;
-  opacity: 0.8;
+.landingRight {
+  flex: 0 0 45%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 60px 0 0;
 }
+
+.landingCards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.landingCard {
+  background: #11100a;
+  border: 1px solid #2a2719;
+  border-radius: 8px;
+  display: flex;
+  overflow: hidden;
+  height: 130px;
+  transition: border-color 0.2s;
+}
+.landingCard:hover { border-color: rgba(201,168,76,0.3); }
+
+.landingCardAccent {
+  width: 3px;
+  flex-shrink: 0;
+}
+
+.landingCardContent {
+  flex: 1;
+  padding: 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.landingCardName {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: #e8e0cc;
+  line-height: 1.3;
+}
+
+.landingCardSub {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  color: #7a7355;
+}
+
+.landingCardDivider {
+  height: 1px;
+  background: #2a2719;
+  margin: 5px 0;
+}
+
+.landingCardDate {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: var(--gold);
+}
+
+.landingCardTier {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 10px;
+  margin-top: auto;
+}
+
+.landingPowered {
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: #4d4733;
+  padding: 14px;
+  flex-shrink: 0;
+}
+
+/* legacy - keep for mobile compat */
+.landingInner { display: none; }
+.landingMark  { display: none; }
+.landingBtnIcon { display: none; }
 
 /* ── Explore Festivals ───────────────────────────────────────────────────────── */
 .exploreBody {
@@ -1517,7 +1621,7 @@
 }
 
 .tierABadge { background: rgba(201,168,76,0.2);  color: var(--gold); }
-.tierBBadge { background: rgba(160,128,64,0.18); color: #A08040; }
+.tierBBadge { background: rgba(107,173,235,0.18); color: #6badeb; }
 .tierCBadge { background: rgba(120,100,60,0.15); color: #806840; }
 
 .exploreFestName {
@@ -1641,7 +1745,16 @@
 
   .starters { grid-template-columns: 1fr; }
 
-  .landingBtns { flex-direction: column; }
-
   .exploreGrid { grid-template-columns: 1fr; }
+
+  /* Landing mobile */
+  .landingNav   { padding: 0 24px; }
+  .landingMain  { flex-direction: column; align-items: flex-start; padding: 32px 0; overflow-y: auto; }
+  .landingLeft  { padding: 0 24px; flex: none; }
+  .landingTitle { font-size: 56px; }
+  .landingSubtitle { font-size: 18px; }
+  .landingRight { flex: none; padding: 24px 24px 0; width: 100%; }
+  .landingCards { grid-template-columns: 1fr 1fr; max-width: 100%; }
+  .landingBtns  { flex-direction: column; }
+  .landingBtnPrimary, .landingBtnSecondary { text-align: center; }
 }

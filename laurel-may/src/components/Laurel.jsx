@@ -836,29 +836,59 @@ function LaurelMark({ size = 28 }) {
 
 // ─── Landing ──────────────────────────────────────────────────────────────────
 
+const PREVIEW_FESTS = [
+  { name: 'Sundance Film Festival', sub: 'Park City, USA',     tier: 'A', date: 'Jan 2026', color: '#e5b82e' },
+  { name: 'Berlin International',   sub: 'Berlin, Germany',    tier: 'A', date: 'Feb 2026', color: '#e5b82e' },
+  { name: 'Tribeca Film Festival',  sub: 'New York, USA',      tier: 'A', date: 'Jun 2026', color: '#e5b82e' },
+  { name: 'SXSW Film Festival',     sub: 'Austin, USA',        tier: 'B', date: 'Mar 2026', color: '#6badeb' },
+]
+
 function Landing({ onChat, onExplore }) {
   return (
     <div className={styles.landing}>
-      <div className={styles.landingInner}>
-        <div className={styles.landingMark}>
-          <LaurelMark size={80} />
+      <nav className={styles.landingNav}>
+        <span className={styles.landingNavLogo}>LAUREL</span>
+        <div className={styles.landingNavRight}>
+          <button className={styles.landingNavLink} onClick={onExplore}>Explore Festivals</button>
+          <span className={styles.landingNavLink}>About</span>
         </div>
-        <h1 className={styles.landingTitle}>Laurel</h1>
-        <p className={styles.landingSubtitle}>Film Festival Strategy</p>
-        <p className={styles.landingBody}>
-          Build a tailored festival submission strategy for your film, or explore the festival landscape.
-        </p>
-        <div className={styles.landingBtns}>
-          <button className={styles.landingBtnPrimary} onClick={onChat}>
-            <span className={styles.landingBtnIcon}>◆</span>
-            Talk with Laurel
-          </button>
-          <button className={styles.landingBtnSecondary} onClick={onExplore}>
-            <span className={styles.landingBtnIcon}>⊞</span>
-            Explore Festivals
-          </button>
+      </nav>
+
+      <div className={styles.landingMain}>
+        <div className={styles.landingLeft}>
+          <h1 className={styles.landingTitle}>LAUREL</h1>
+          <p className={styles.landingSubtitle}>
+            AI-powered film festival strategy.<br />
+            Built for serious filmmakers.
+          </p>
+          <p className={styles.landingBody}>
+            I've worked with Sundance, A24, NEON, and Magnolia Pictures. Tell me about your film and I'll build a comprehensive festival submission strategy — tailored to your genre, budget, and goals.
+          </p>
+          <div className={styles.landingBtns}>
+            <button className={styles.landingBtnPrimary} onClick={onChat}>Talk with Laurel</button>
+            <button className={styles.landingBtnSecondary} onClick={onExplore}>Explore Festivals</button>
+          </div>
+        </div>
+
+        <div className={styles.landingRight}>
+          <div className={styles.landingCards}>
+            {PREVIEW_FESTS.map((f, i) => (
+              <div key={i} className={styles.landingCard}>
+                <div className={styles.landingCardAccent} style={{ background: f.color }} />
+                <div className={styles.landingCardContent}>
+                  <span className={styles.landingCardName}>{f.name}</span>
+                  <span className={styles.landingCardSub}>{f.sub}</span>
+                  <div className={styles.landingCardDivider} />
+                  <span className={styles.landingCardDate}>{f.date}</span>
+                  <span className={styles.landingCardTier} style={{ color: f.color }}>Tier {f.tier}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      <p className={styles.landingPowered}>Powered by Anthropic Claude</p>
     </div>
   )
 }
