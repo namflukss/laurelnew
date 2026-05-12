@@ -810,7 +810,16 @@ export default function Laurel() {
       }
       const reply = data.content?.[0]?.text ?? 'Something went wrong.'
       history.current = [...history.current, { role: 'assistant', content: reply }]
-      setMessages(prev => [...prev, { role: 'agent', text: reply }])
+
+      const strategy = parseStrategy(reply)
+      if (strategy) {
+        const intro = getIntro(reply)
+        if (intro) setMessages(prev => [...prev, { role: 'agent', text: intro }])
+        setActiveStrategy(strategy)
+        setMode('strategy')
+      } else {
+        setMessages(prev => [...prev, { role: 'agent', text: reply }])
+      }
     } catch (err) {
       setMessages(prev => [...prev, { role: 'agent', text: `⚠️ ${err.message}` }])
       history.current = history.current.slice(0, -1)
