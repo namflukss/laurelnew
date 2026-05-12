@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid, Calendar, GitCommitVertical } from 'lucide-react'
+import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid } from 'lucide-react'
 import styles from './Laurel.module.css'
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -338,199 +338,265 @@ function groupByDeadline(festivals) {
 
 // ─── Strategy Dashboard ───────────────────────────────────────────────────────
 
-const VIEWS = [
-  { id: 'grid',     label: 'Grid',     Icon: LayoutGrid },
-  { id: 'calendar', label: 'Calendar', Icon: Calendar },
-  { id: 'timeline', label: 'Timeline', Icon: GitCommitVertical },
-]
+const TIER_COLORS    = { A: '#FF5200', B: '#FAC703', C: 'rgba(255,255,255,0.65)' }
+const TIER_BG        = { A: '#FF520018', B: '#FAC70318', C: 'rgba(255,255,255,0.06)' }
+const TIER_PRESTIGE  = { A: 10, B: 7, C: 4 }
 
-function DashFestCard({ festival, tier }) {
-  const tierCls = { A: styles.dashCardA, B: styles.dashCardB, C: styles.dashCardC }
+function DetailCard({ label, children }) {
   return (
-    <div className={`${styles.dashFestCard} ${tierCls[tier] || ''}`}>
-      <div className={styles.dashCardHead}>
-        <div>
-          <div className={styles.dashCardName}>{festival.name}</div>
-          {festival.location && <div className={styles.dashCardLoc}>{festival.location}</div>}
-        </div>
-        {(festival.submit_by || festival.festival_date) && (
-          <div className={styles.dashCardDates}>
-            {festival.submit_by && (
-              <div className={styles.dashDateRow}>
-                <span className={styles.dashDateLabel}>Submit</span>
-                <span className={styles.dashDateVal}>{festival.submit_by}</span>
-              </div>
-            )}
-            {festival.festival_date && (
-              <div className={styles.dashDateRow}>
-                <span className={styles.dashDateLabel}>Screens</span>
-                <span className={styles.dashDateVal}>{festival.festival_date}</span>
-              </div>
-            )}
-          </div>
-        )}
+    <div style={{ background: '#181818', border: '1px solid #222', borderRadius: 7, padding: '10px 12px' }}>
+      <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#555', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 10 }}>
+        {label}
       </div>
-      <p className={styles.dashCardReason}>{festival.reason}</p>
-      {festival.tips?.length > 0 && (
-        <ul className={styles.dashCardTips}>
-          {festival.tips.map((t, i) => <li key={i}>{t}</li>)}
-        </ul>
-      )}
+      {children}
     </div>
   )
 }
+
 
 const TIER_META = {
-  A: { label: 'Top-Tier',         cls: styles.tierA },
-  B: { label: 'Mid-Tier',         cls: styles.tierB },
-  C: { label: 'Niche / Regional', cls: styles.tierC },
-}
-
-function GridView({ strategy }) {
-  return (
-    <div className={styles.gridView}>
-      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
-        const meta = TIER_META[tier.tier] || { label: tier.label, cls: styles.tierC }
-        return (
-          <div key={tier.tier} className={styles.tierSection}>
-            <div className={`${styles.tierHeader} ${meta.cls}`}>
-              <span className={styles.tierBadge}>{tier.tier}</span>
-              <span className={styles.tierLabel}>{tier.label || meta.label}</span>
-              <span className={styles.tierCount}>{tier.festivals.length} festival{tier.festivals.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className={styles.dashFestGrid}>
-              {tier.festivals.map((f, i) => <DashFestCard key={i} festival={f} tier={tier.tier} />)}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function CalendarView({ strategy }) {
-  const groups = groupByDeadline(flatFestivals(strategy))
-  if (groups.length === 0) return (
-    <div className={styles.emptyView}><p>No deadline dates in this strategy.</p><p>Ask Laurel to regenerate with submission windows included.</p></div>
-  )
-  const tierColor = { A: styles.calDotA, B: styles.calDotB, C: styles.calDotC }
-  return (
-    <div className={styles.calView}>
-      {groups.map(g => (
-        <motion.div key={g.key} className={styles.calMonth} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <div className={styles.calMonthHeader}>
-            <span className={styles.calMonthName}>{MONTH_FULL[g.month]}</span>
-            <span className={styles.calMonthYear}>{g.year}</span>
-            <span className={styles.calMonthCount}>{g.festivals.length} deadline{g.festivals.length !== 1 ? 's' : ''}</span>
-          </div>
-          <div className={styles.calFests}>
-            {g.festivals.map((f, i) => (
-              <div key={i} className={styles.calFestRow}>
-                <span className={`${styles.calDot} ${tierColor[f.tier] || ''}`} />
-                <div className={styles.calFestInfo}>
-                  <span className={styles.calFestName}>{f.name}</span>
-                  <span className={styles.calFestLoc}>{f.location}</span>
-                </div>
-                <div className={styles.calFestMeta}>
-                  <span className={`${styles.calTierBadge} ${styles[`calTier${f.tier}`]}`}>{f.tier}</span>
-                  {f.festival_date && <span className={styles.calScreenDate}>screens {f.festival_date}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  )
-}
-
-function TimelineView({ strategy }) {
-  const all    = flatFestivals(strategy)
-  const sorted = all.map(f => ({ ...f, parsed: parseMonthYear(f.submit_by) })).filter(f => f.parsed).sort((a, b) => a.parsed.sortKey - b.parsed.sortKey)
-  const noDate = all.filter(f => !parseMonthYear(f.submit_by))
-  if (sorted.length === 0) return <div className={styles.emptyView}><p>No deadline dates available for timeline view.</p></div>
-  const tierCls  = { A: styles.tlCardA,  B: styles.tlCardB,  C: styles.tlCardC  }
-  const dotCls   = { A: styles.tlDotA,   B: styles.tlDotB,   C: styles.tlDotC   }
-  const badgeCls = { A: styles.tlBadgeA, B: styles.tlBadgeB, C: styles.tlBadgeC }
-  return (
-    <div className={styles.tlView}>
-      {sorted.map((f, i) => {
-        const showMonth = i === 0 || sorted[i - 1].parsed.sortKey !== f.parsed.sortKey
-        return (
-          <div key={i} className={styles.tlItem}>
-            {showMonth && (
-              <div className={styles.tlMonthMarker}>
-                <span className={styles.tlMonthLabel}>{MONTH_ABBR[f.parsed.month]} {f.parsed.year}</span>
-                <div className={styles.tlMonthLine} />
-              </div>
-            )}
-            <div className={styles.tlRow}>
-              <div className={styles.tlTrackCol}>
-                <div className={`${styles.tlDot} ${dotCls[f.tier] || ''}`} />
-                {i < sorted.length - 1 && <div className={styles.tlConnector} />}
-              </div>
-              <motion.div className={`${styles.tlCard} ${tierCls[f.tier] || ''}`} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}>
-                <div className={styles.tlCardHead}>
-                  <span className={`${styles.tlBadge} ${badgeCls[f.tier] || ''}`}>{f.tier}</span>
-                  <span className={styles.tlCardName}>{f.name}</span>
-                  <span className={styles.tlCardLoc}>{f.location}</span>
-                </div>
-                <p className={styles.tlCardReason}>{f.reason}</p>
-                {f.festival_date && <div className={styles.tlCardFestDate}>Festival: {f.festival_date}</div>}
-              </motion.div>
-            </div>
-          </div>
-        )
-      })}
-      {noDate.length > 0 && (
-        <div className={styles.tlNoDate}>
-          <div className={styles.tlNoDateLabel}>No deadline specified</div>
-          {noDate.map((f, i) => (
-            <div key={i} className={`${styles.tlCard} ${tierCls[f.tier] || ''}`} style={{ marginBottom: 8 }}>
-              <div className={styles.tlCardHead}>
-                <span className={`${styles.tlBadge} ${badgeCls[f.tier] || ''}`}>{f.tier}</span>
-                <span className={styles.tlCardName}>{f.name}</span>
-                <span className={styles.tlCardLoc}>{f.location}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+  A: { label: 'Top-Tier Targets', color: '#FF5200' },
+  B: { label: 'Strong Mid-Tier',  color: '#FAC703' },
+  C: { label: 'Niche & Regional', color: 'rgba(255,255,255,0.6)' },
 }
 
 function StrategyDashboard({ strategy, onBack }) {
-  const [view, setView] = useState('grid')
-  const total = flatFestivals(strategy).length
+  const allFestivals = flatFestivals(strategy)
+  const [selected, setSelected] = useState(allFestivals[0] || null)
+
+  const tc       = selected ? (TIER_COLORS[selected.tier] || TIER_COLORS.C) : TIER_COLORS.A
+  const prestige = selected ? (TIER_PRESTIGE[selected.tier] || 4) : 4
+  const selIdx   = allFestivals.findIndex(f => f.name === selected?.name)
+
   return (
-    <div className={styles.root}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={onBack}>← Chat</button>
-          <div className={styles.headerDivider} />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0A0503', overflow: 'hidden', fontFamily: "'Geist Mono', monospace" }}>
+
+      {/* ── Top bar ── */}
+      <div style={{
+        height: 48, minHeight: 48, background: '#111',
+        borderBottom: '1px solid #1e1e1e',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px', flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={onBack} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#666',
+            letterSpacing: '0.12em', padding: 0,
+          }}>← Chat</button>
+          <div style={{ width: 1, height: 16, background: '#2a2a2a' }} />
           <div>
-            <div className={styles.headerTitle}>Your Strategy</div>
-            <div className={styles.headerSub}>{total} festival{total !== 1 ? 's' : ''} · {strategy.tiers.filter(t => t.festivals?.length > 0).length} tiers</div>
+            <div style={{ fontSize: 11, color: '#fff', letterSpacing: '0.06em' }}>Your Strategy</div>
+            <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.1em', marginTop: 1 }}>
+              {allFestivals.length} festivals · {strategy.tiers.filter(t => t.festivals?.length > 0).length} tiers
+            </div>
           </div>
         </div>
-        <div className={styles.dashTabs}>
-          {VIEWS.map(({ id, label, Icon }) => (
-            <button key={id} className={`${styles.dashTab} ${view === id ? styles.dashTabActive : ''}`} onClick={() => setView(id)}>
-              <Icon size={12} />{label}
-            </button>
-          ))}
+        {strategy.closing && (
+          <div style={{ fontSize: 9, color: '#3a3a3a', letterSpacing: '0.06em', maxWidth: '40%', textAlign: 'right' }}>
+            {strategy.closing}
+          </div>
+        )}
+      </div>
+
+      {/* ── Body ── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+
+        {/* Sidebar */}
+        <div style={{
+          width: '21%', minWidth: 168, background: '#111',
+          borderRight: '1px solid #1e1e1e', overflowY: 'auto', padding: '12px 0',
+        }}>
+          <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0 12px 10px' }}>
+            Festival List
+          </div>
+          {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
+            const tColor = TIER_COLORS[tier.tier] || TIER_COLORS.C
+            return (
+              <div key={tier.tier}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px 6px', borderTop: '1px solid #1a1a1a' }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%',
+                    background: tColor + '22', border: `1px solid ${tColor}55`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 8, color: tColor, flexShrink: 0,
+                  }}>{tier.tier}</div>
+                  <span style={{ fontSize: 9, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    {tier.label}
+                  </span>
+                </div>
+                {tier.festivals.map((f, i) => {
+                  const isActive = selected?.name === f.name
+                  return (
+                    <div key={i}
+                      onClick={() => setSelected({ ...f, tier: tier.tier, tierLabel: tier.label })}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '7px 12px', cursor: 'pointer',
+                        borderLeft: isActive ? `2px solid ${tColor}` : '2px solid transparent',
+                        background: isActive ? tColor + '12' : 'transparent',
+                        transition: 'background 0.15s',
+                      }}>
+                      <div style={{
+                        width: 44, height: 33, borderRadius: 4,
+                        background: tColor + '18', border: `1px solid ${tColor}22`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, overflow: 'hidden', position: 'relative',
+                      }}>
+                        <div style={{
+                          position: 'absolute', left: 0, top: 0, bottom: 0, width: 5,
+                          background: '#00000040', display: 'flex', flexDirection: 'column',
+                          justifyContent: 'space-evenly', padding: '2px 1px',
+                        }}>
+                          {[0,1,2].map(j => <div key={j} style={{ height: 4, background: '#ffffff10', borderRadius: 1 }} />)}
+                        </div>
+                        <span style={{ fontSize: 8, color: isActive ? tColor : '#555', letterSpacing: '0.04em' }}>
+                          {f.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 10, color: isActive ? '#fff' : '#777', lineHeight: 1.3, letterSpacing: '0.02em' }}>
+                        {f.name}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
-      </header>
-      {strategy.closing && <div className={styles.dashClosingBanner}>{strategy.closing}</div>}
-      <div className={styles.dashContent}>
-        <AnimatePresence mode="wait">
-          <motion.div key={view} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }} style={{ height: '100%' }}>
-            {view === 'grid'     && <GridView     strategy={strategy} />}
-            {view === 'calendar' && <CalendarView strategy={strategy} />}
-            {view === 'timeline' && <TimelineView strategy={strategy} />}
-          </motion.div>
-        </AnimatePresence>
+
+        {/* Viewport */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 7vw', position: 'relative', overflow: 'hidden' }}>
+          {selected && (
+            <div style={{
+              position: 'absolute', right: '4vw', bottom: '8vh',
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: 'clamp(80px, 13vw, 160px)',
+              color: '#131313', lineHeight: 1, userSelect: 'none', pointerEvents: 'none',
+            }}>
+              {String(selIdx + 1).padStart(2, '0')}
+            </div>
+          )}
+
+          {selected ? (
+            <motion.div key={selected.name} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+              <div style={{ fontSize: 10, color: '#444', letterSpacing: '0.18em', marginBottom: '2.5vh' }}>
+                {String(selIdx + 1).padStart(2, '0')} / {String(allFestivals.length).padStart(2, '0')}
+              </div>
+              <h2 style={{
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: 'clamp(34px, 4.5vw, 64px)',
+                color: '#fff', lineHeight: 1.1, margin: '0 0 2.5vh',
+                fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase',
+              }}>
+                {selected.name}
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 10, color: '#555', letterSpacing: '0.1em', marginBottom: '1.8vh' }}>
+                {selected.location && <span>{selected.location}</span>}
+                <span style={{ color: '#2a2a2a' }}>·</span>
+                <span style={{ color: tc }}>Tier {selected.tier}</span>
+              </div>
+              <div style={{ width: 48, height: 1, background: tc, opacity: 0.6, marginBottom: '2.2vh' }} />
+              <div style={{ fontSize: 9, color: '#555', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '2.2vh' }}>
+                {selected.tierLabel}
+              </div>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#888', lineHeight: 1.8, maxWidth: 460, margin: '0 0 2.5vh' }}>
+                {selected.reason}
+              </p>
+              {selected.submit_by && (
+                <div style={{
+                  display: 'inline-block', border: `1px solid ${tc}44`,
+                  borderRadius: 20, padding: '4px 14px',
+                  fontSize: 9, color: tc, letterSpacing: '0.1em',
+                }}>
+                  Submit by {selected.submit_by}
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <div style={{ fontSize: 11, color: '#333' }}>Select a festival</div>
+          )}
+        </div>
+
+        {/* Detail panel */}
+        <div style={{
+          width: '25%', minWidth: 200, background: '#131313',
+          borderLeft: '1px solid #1e1e1e', padding: 12,
+          display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto',
+        }}>
+          {selected ? (
+            <>
+              <DetailCard label="Festival Details">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 10 }}>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#fff', lineHeight: 1.3, flex: 1 }}>
+                    {selected.name}
+                  </div>
+                  <div style={{
+                    background: tc + '22', border: `1px solid ${tc}44`,
+                    borderRadius: 20, padding: '2px 8px', flexShrink: 0,
+                    fontSize: 8, color: tc, letterSpacing: '0.06em', marginTop: 2,
+                  }}>
+                    Tier {selected.tier}
+                  </div>
+                </div>
+                {selected.location && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 10, color: '#555' }}>Location</span>
+                    <span style={{ fontSize: 10, color: '#888', textAlign: 'right', maxWidth: '55%' }}>{selected.location}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, color: '#555' }}>Category</span>
+                  <span style={{ fontSize: 10, color: '#666', textAlign: 'right', maxWidth: '55%' }}>{selected.tierLabel}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 10, color: '#555' }}>Priority</span>
+                  <span style={{ fontSize: 10, color: tc }}>{prestige} / 10</span>
+                </div>
+                <div style={{ background: '#0f0f0f', borderRadius: 3, height: 4, marginBottom: 12, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', background: tc, borderRadius: 3, width: `${prestige * 10}%`, transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ background: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: 5, padding: '8px 10px' }}>
+                  <div style={{ fontSize: 9, color: tc, marginBottom: 5, letterSpacing: '0.1em' }}>WHY THIS FESTIVAL</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: '#777', lineHeight: 1.6 }}>{selected.reason}</div>
+                </div>
+              </DetailCard>
+
+              {(selected.submit_by || selected.festival_date) && (
+                <DetailCard label="Key Deadlines">
+                  {selected.submit_by && (
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF5200', flexShrink: 0, marginRight: 8 }} />
+                      <span style={{ fontSize: 10, color: '#999', flex: 1 }}>Submit by</span>
+                      <span style={{ fontSize: 10, color: '#666' }}>{selected.submit_by}</span>
+                    </div>
+                  )}
+                  {selected.festival_date && (
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FAC703', flexShrink: 0, marginRight: 8 }} />
+                      <span style={{ fontSize: 10, color: '#999', flex: 1 }}>Festival date</span>
+                      <span style={{ fontSize: 10, color: '#666' }}>{selected.festival_date}</span>
+                    </div>
+                  )}
+                </DetailCard>
+              )}
+
+              {selected.tips?.length > 0 && (
+                <DetailCard label="Strategy Tips">
+                  {selected.tips.map((tip, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: i < selected.tips.length - 1 ? 10 : 0 }}>
+                      <div style={{ width: 1, background: tc + '55', flexShrink: 0, marginTop: 4, alignSelf: 'stretch' }} />
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: '#777', lineHeight: 1.6 }}>{tip}</span>
+                    </div>
+                  ))}
+                </DetailCard>
+              )}
+            </>
+          ) : (
+            <div style={{ fontSize: 10, color: '#333', padding: 4 }}>Select a festival to see details</div>
+          )}
+        </div>
+
       </div>
     </div>
   )
@@ -562,10 +628,11 @@ function StrategyMessage({ text, onViewStrategy }) {
     <div className={styles.strategyBlock}>
       {intro && <p className={styles.strategyIntro}>{intro}</p>}
       {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
-        const meta = TIER_META[tier.tier] || { label: tier.label, cls: styles.tierC }
+        const meta = TIER_META[tier.tier] || { label: tier.label, color: '#aaa' }
+        const tierCls = tier.tier === 'A' ? styles.tierA : tier.tier === 'B' ? styles.tierB : styles.tierC
         return (
           <div key={tier.tier} className={styles.tierSection}>
-            <div className={`${styles.tierHeader} ${meta.cls}`}>
+            <div className={`${styles.tierHeader} ${tierCls}`}>
               <span className={styles.tierBadge}>{tier.tier}</span>
               <span className={styles.tierLabel}>{tier.label || meta.label}</span>
             </div>
