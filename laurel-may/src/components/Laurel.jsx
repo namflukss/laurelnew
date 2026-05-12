@@ -283,10 +283,19 @@ function normalizeFestivals(arr) {
 }
 
 function parseStrategy(text) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]+?)```/)
-  const raw = fenced ? fenced[1].trim() : null
-  const bare = !raw ? text.match(/(\{[\s\S]*?\})(?:\s*$)/m) : null
-  const candidate = raw || (bare && bare[1])
+  // Try fenced code block first (greedy match to handle large nested JSON)
+  const fenced = text.match(/```(?:json)?\s*\n?([\s\S]*)\n?```/)
+  let candidate = fenced ? fenced[1].trim() : null
+
+  // Fallback: find first { and last } in the whole text
+  if (!candidate) {
+    const start = text.indexOf('{')
+    const end = text.lastIndexOf('}')
+    if (start !== -1 && end !== -1 && end > start) {
+      candidate = text.slice(start, end + 1)
+    }
+  }
+
   if (!candidate) return null
   try { return normalizeToStrategy(JSON.parse(candidate)) } catch { return null }
 }
