@@ -1,3 +1,5 @@
 {
-  "outputDirectory": "laurel-may/dist"
+  "buildCommand": "cd laurel-may && npm install && npm run build",
+  "outputDirectory": "laurel-may/dist",
+  "installCommand": "echo skip"
 }
