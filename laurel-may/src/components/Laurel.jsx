@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid } from 'lucide-react'
+import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid, Plus, ArrowUp, X, FileText } from 'lucide-react'
 import styles from './Laurel.module.css'
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -801,6 +801,86 @@ function KeyScreen({ onReady, onBack }) {
   )
 }
 
+// ─── Input UI Helpers ────────────────────────────────────────────────────────
+
+function ToolBtn({ children, onClick, title, active }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: 32, height: 32, borderRadius: 8, border: 'none',
+        background: active || hovered ? 'rgba(255,82,0,0.1)' : 'transparent',
+        color: active ? '#FF5200' : hovered ? '#FF5200' : 'rgba(255,255,255,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
+        flexShrink: 0,
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ─── File Preview Card ────────────────────────────────────────────────────────
+
+function FilePreviewCard({ file, onRemove }) {
+  const isImg = file.type.startsWith('image/') && file.preview
+  const [hovered, setHovered] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative', flexShrink: 0, width: 88, height: 88,
+        borderRadius: 12, overflow: 'hidden',
+        border: `1px solid rgba(255,82,0,0.2)`,
+        background: '#1A0D05',
+        transition: 'border-color 0.15s',
+        ...(hovered && { borderColor: 'rgba(255,82,0,0.45)' }),
+      }}
+    >
+      {isImg ? (
+        <img src={file.preview} alt={file.file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <div style={{ padding: '10px 10px 8px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FileText size={14} color="rgba(255,255,255,0.4)" />
+            <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {file.file.name.split('.').pop()}
+            </span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {file.file.name}
+            </div>
+            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+              {file.file.size > 1024 * 1024 ? `${(file.file.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(file.file.size / 1024)} KB`}
+            </div>
+          </div>
+        </div>
+      )}
+      {hovered && (
+        <button
+          onClick={() => onRemove(file.id)}
+          style={{
+            position: 'absolute', top: 5, right: 5,
+            width: 18, height: 18, borderRadius: '50%',
+            background: 'rgba(0,0,0,0.7)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: '#fff',
+          }}
+        >
+          <X size={10} />
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Laurel() {
@@ -812,11 +892,33 @@ export default function Laurel() {
   const [loading,        setLoading]        = useState(false)
   const [showCommands,   setShowCommands]   = useState(false)
   const [activeCommand,  setActiveCommand]  = useState(-1)
+  const [attachedFiles,  setAttachedFiles]  = useState([])
+  const [isDragging,     setIsDragging]     = useState(false)
+  const [inputFocused,   setInputFocused]   = useState(false)
 
   const history        = useRef([])
   const messagesEndRef = useRef(null)
   const textareaRef    = useRef(null)
   const paletteRef     = useRef(null)
+  const fileInputRef   = useRef(null)
+
+  function handleFiles(fileList) {
+    const newFiles = Array.from(fileList).map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+      type: file.type || 'application/octet-stream',
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+    }))
+    setAttachedFiles(prev => [...prev, ...newFiles])
+  }
+
+  function removeFile(id) {
+    setAttachedFiles(prev => {
+      const f = prev.find(f => f.id === id)
+      if (f?.preview) URL.revokeObjectURL(f.preview)
+      return prev.filter(f => f.id !== id)
+    })
+  }
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
 
@@ -869,6 +971,7 @@ export default function Laurel() {
     const trimmed = text.trim()
     if (!trimmed || loading) return
     setInput('')
+    setAttachedFiles([])
     setMessages(prev => [...prev, { role: 'user', text: trimmed }])
     history.current = [...history.current, { role: 'user', content: trimmed }]
     setLoading(true)
@@ -968,20 +1071,143 @@ export default function Laurel() {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className={styles.inputArea}>
-        <div className={styles.inputOuter}>
-          {showCommands && (
-            <CommandPalette query={input} active={activeCommand} onSelect={selectCommand} onClose={() => setShowCommands(false)} paletteRef={paletteRef} />
+      {/* ── New Claude-style Chat Input ── */}
+      <div
+        style={{ padding: '0 16px 20px', flexShrink: 0, position: 'relative' }}
+        onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+        onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
+        onDrop={e => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files) handleFiles(e.dataTransfer.files) }}
+      >
+        {/* Command Palette */}
+        {showCommands && (
+          <CommandPalette query={input} active={activeCommand} onSelect={selectCommand} onClose={() => setShowCommands(false)} paletteRef={paletteRef} />
+        )}
+
+        {/* Input container */}
+        <div style={{
+          background: '#1A0D05',
+          border: `1px solid ${inputFocused ? 'rgba(255,82,0,0.4)' : 'rgba(255,255,255,0.09)'}`,
+          borderRadius: 20,
+          boxShadow: inputFocused
+            ? '0 0 0 3px rgba(255,82,0,0.1), 0 8px 32px rgba(0,0,0,0.5)'
+            : '0 4px 20px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3)',
+          transition: 'border-color 0.2s, box-shadow 0.2s',
+          overflow: 'hidden',
+          cursor: 'text',
+        }}
+          onClick={() => textareaRef.current?.focus()}
+        >
+          {/* File previews */}
+          {attachedFiles.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, padding: '12px 12px 0', overflowX: 'auto' }}>
+              {attachedFiles.map(f => (
+                <FilePreviewCard key={f.id} file={f} onRemove={removeFile} />
+              ))}
+            </div>
           )}
-          <div className={styles.inputWrap}>
-            <button className={`${styles.cmdTrigger} ${showCommands ? styles.cmdTriggerActive : ''}`} onClick={() => { setInput('/'); setShowCommands(true); textareaRef.current?.focus() }} title="Commands">
-              <Command size={13} />
-            </button>
-            <textarea ref={textareaRef} className={styles.textarea} placeholder="Tell me about your film… or type / for commands" value={input} rows={1} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} />
-            <button className={styles.sendBtn} onClick={() => send(input)} disabled={loading || !input.trim()} aria-label="Send">↑</button>
+
+          {/* Textarea */}
+          <div style={{ padding: attachedFiles.length > 0 ? '10px 14px 0' : '14px 14px 0' }}>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder="Tell me about your film…"
+              rows={1}
+              style={{
+                width: '100%', background: 'transparent', border: 'none',
+                outline: 'none', resize: 'none', overflow: 'hidden',
+                color: '#FFFFFF', fontSize: 15, lineHeight: 1.65,
+                fontFamily: "'Inter', sans-serif", fontWeight: 400,
+                display: 'block',
+              }}
+            />
+          </div>
+
+          {/* Toolbar */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '6px 8px 8px',
+          }}>
+            {/* Left tools */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <ToolBtn title="Attach file" onClick={() => fileInputRef.current?.click()}>
+                <Plus size={17} />
+              </ToolBtn>
+              <ToolBtn
+                title="Commands (/)"
+                onClick={() => { setInput('/'); setShowCommands(true); textareaRef.current?.focus() }}
+                active={showCommands}
+              >
+                <Command size={15} />
+              </ToolBtn>
+            </div>
+
+            {/* Right tools */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                fontFamily: "'Geist Mono', monospace", fontSize: 10,
+                color: 'rgba(255,255,255,0.22)', letterSpacing: '0.05em',
+                userSelect: 'none',
+              }}>
+                claude-haiku-4
+              </span>
+              <button
+                onClick={() => send(input)}
+                disabled={loading || !input.trim()}
+                style={{
+                  width: 32, height: 32, borderRadius: 10, border: 'none',
+                  background: input.trim() && !loading ? '#FF5200' : 'rgba(255,82,0,0.2)',
+                  color: '#fff', cursor: input.trim() && !loading ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.15s, transform 0.1s',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={e => { if (input.trim() && !loading) e.currentTarget.style.background = '#C81400' }}
+                onMouseLeave={e => { if (input.trim() && !loading) e.currentTarget.style.background = '#FF5200' }}
+                onMouseDown={e => { if (input.trim() && !loading) e.currentTarget.style.transform = 'scale(0.93)' }}
+                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
+                aria-label="Send"
+              >
+                <ArrowUp size={16} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
         </div>
-        <p className={styles.inputHint}>Enter to send · Shift+Enter for new line · / for commands</p>
+
+        {/* Drag overlay */}
+        {isDragging && (
+          <div style={{
+            position: 'absolute', inset: '0 16px 20px',
+            background: 'rgba(255,82,0,0.07)',
+            border: '2px dashed #FF5200',
+            borderRadius: 20, zIndex: 50,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(6px)', pointerEvents: 'none',
+          }}>
+            <Plus size={28} color="#FF5200" style={{ marginBottom: 8, opacity: 0.8 }} />
+            <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: '#FF5200', letterSpacing: '0.1em' }}>
+              DROP TO ATTACH
+            </p>
+          </div>
+        )}
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef} type="file" multiple style={{ display: 'none' }}
+          onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = '' }}
+        />
+
+        <p style={{
+          fontFamily: "'Geist Mono', monospace", fontSize: 10,
+          color: 'rgba(255,255,255,0.18)', letterSpacing: '0.06em',
+          textAlign: 'center', marginTop: 10,
+        }}>
+          Enter to send · Shift+Enter for new line · / for commands
+        </p>
       </div>
     </div>
   )
