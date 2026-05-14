@@ -604,17 +604,160 @@ function StrategyDashboard({ strategy, onBack }) {
 
 // ─── Strategy Cards (in chat) ─────────────────────────────────────────────────
 
-function FestivalCard({ festival }) {
+const TIER_CARD_CLASS  = { A: styles.festCardNewA,   B: styles.festCardNewB,   C: styles.festCardNewC   }
+const TIER_BADGE_CLASS = { A: styles.tierBlockBadgeA, B: styles.tierBlockBadgeB, C: styles.tierBlockBadgeC }
+const TIER_DOT_CLASS   = { A: styles.timelineDotA,   B: styles.timelineDotB,   C: styles.timelineDotC   }
+const TIER_BADGE2      = { A: styles.timelineBadgeA, B: styles.timelineBadgeB, C: styles.timelineBadgeC }
+const TIER_CHIP_CLASS  = { A: styles.calendarChipA,  B: styles.calendarChipB,  C: styles.calendarChipC  }
+const TIER_CHIP_NAME   = { A: styles.calendarChipNameA, B: styles.calendarChipNameB, C: styles.calendarChipNameC }
+
+function FestivalCardV2({ festival, tier }) {
+  const [showTips, setShowTips] = useState(false)
   return (
-    <div className={styles.festCard}>
-      <div className={styles.festHeader}>
-        <span className={styles.festName}>{festival.name}</span>
-        {festival.location && <span className={styles.festLocation}>{festival.location}</span>}
+    <div className={`${styles.festCardNew} ${TIER_CARD_CLASS[tier] || styles.festCardNewC}`}>
+      <div className={styles.festCardTop}>
+        <div>
+          <div className={styles.festCardNameNew}>{festival.name}</div>
+          {festival.location && <div className={styles.festCardLocNew}>{festival.location}</div>}
+        </div>
+        <div className={styles.festCardDates}>
+          {festival.submit_by && (
+            <span className={`${styles.festDateChip} ${styles.festDateChipSubmit}`}>↑ {festival.submit_by}</span>
+          )}
+          {festival.festival_date && (
+            <span className={`${styles.festDateChip} ${styles.festDateChipFest}`}>★ {festival.festival_date}</span>
+          )}
+        </div>
       </div>
-      <p className={styles.festReason}>{festival.reason}</p>
+      {festival.reason && <p className={styles.festReasonNew}>{festival.reason}</p>}
       {festival.tips?.length > 0 && (
-        <ul className={styles.festTips}>{festival.tips.map((tip, i) => <li key={i}>{tip}</li>)}</ul>
+        <>
+          {showTips ? (
+            <div className={styles.festTipsNew}>
+              {festival.tips.map((tip, i) => <span key={i} className={styles.festTipChip}>{tip}</span>)}
+            </div>
+          ) : null}
+          <button
+            onClick={() => setShowTips(p => !p)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, fontSize: 11, color: 'rgba(54,65,83,0.4)', fontFamily: "'Geist Mono', monospace", letterSpacing: '0.02em' }}
+          >
+            {showTips ? '▲ hide tips' : `▼ ${festival.tips.length} tips`}
+          </button>
+        </>
       )}
+    </div>
+  )
+}
+
+function CardsView({ strategy }) {
+  return (
+    <div className={styles.cardsView}>
+      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => (
+        <div key={tier.tier} className={styles.tierBlock}>
+          <div className={styles.tierBlockHead}>
+            <span className={`${styles.tierBlockBadge} ${TIER_BADGE_CLASS[tier.tier] || styles.tierBlockBadgeC}`}>{tier.tier}</span>
+            <span className={styles.tierBlockTitle}>{tier.label}</span>
+            <span style={{ fontSize: 10, color: 'rgba(54,65,83,0.3)', fontFamily: "'Geist Mono', monospace" }}>{tier.festivals.length}</span>
+          </div>
+          <div className={styles.festCards}>
+            {tier.festivals.map((f, i) => <FestivalCardV2 key={i} festival={f} tier={tier.tier} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TimelineView({ festivals }) {
+  const sorted = [...festivals].filter(f => f.submit_by).sort((a, b) => {
+    const pa = parseMonthYear(a.submit_by)
+    const pb = parseMonthYear(b.submit_by)
+    return (pa?.sortKey ?? 999999) - (pb?.sortKey ?? 999999)
+  })
+  const ungrouped = festivals.filter(f => !f.submit_by)
+  const groups = groupByDeadline(sorted)
+
+  return (
+    <div className={styles.timelineView}>
+      {groups.map((group, gi) => (
+        <div key={group.key} className={styles.timelineGroup}>
+          <div className={styles.timelineMonthHead}>
+            <span className={styles.timelineMonthLabel}>{MONTH_FULL[group.month]} {group.year}</span>
+            <div className={styles.timelineMonthLine} />
+          </div>
+          {group.festivals.map((f, fi) => {
+            const isLast = fi === group.festivals.length - 1 && gi === groups.length - 1 && ungrouped.length === 0
+            return (
+              <div key={fi} className={styles.timelineItem}>
+                <div className={styles.timelineDotCol}>
+                  <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
+                  {!isLast && <div className={styles.timelineConnector} />}
+                </div>
+                <div className={styles.timelineContent}>
+                  <div className={styles.timelineTop}>
+                    <div>
+                      <span className={styles.timelineName}>{f.name}</span>
+                      {f.location && <span className={styles.timelineLoc}>{f.location}</span>}
+                    </div>
+                    <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
+                  </div>
+                  {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
+                  {f.festival_date && <div className={styles.timelineFestDate}>Festival: {f.festival_date}</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ))}
+      {ungrouped.length > 0 && (
+        <div className={styles.timelineGroup}>
+          <div className={styles.timelineMonthHead}>
+            <span className={styles.timelineMonthLabel}>No deadline</span>
+            <div className={styles.timelineMonthLine} />
+          </div>
+          {ungrouped.map((f, i) => (
+            <div key={i} className={styles.timelineItem}>
+              <div className={styles.timelineDotCol}>
+                <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
+              </div>
+              <div className={styles.timelineContent}>
+                <div className={styles.timelineTop}>
+                  <span className={styles.timelineName}>{f.name}</span>
+                  <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
+                </div>
+                {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CalendarView({ groups, all }) {
+  if (groups.length === 0) {
+    return (
+      <div style={{ padding: '16px 0', fontSize: 12, color: 'rgba(54,65,83,0.4)', fontFamily: "'Geist Mono', monospace" }}>
+        No submission deadlines provided.
+      </div>
+    )
+  }
+  return (
+    <div className={styles.calendarView}>
+      {groups.map(group => (
+        <div key={group.key} className={styles.calendarRow}>
+          <div className={styles.calendarMonthName}>{MONTH_ABBR[group.month]}<br />{group.year}</div>
+          <div className={styles.calendarFests}>
+            {group.festivals.map((f, i) => (
+              <div key={i} className={`${styles.calendarChip} ${TIER_CHIP_CLASS[f.tier] || styles.calendarChipC}`}>
+                <span className={`${styles.calendarChipName} ${TIER_CHIP_NAME[f.tier] || styles.calendarChipNameC}`}>{f.name}</span>
+                {f.location && <span className={styles.calendarChipSub}>{f.location}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -622,30 +765,67 @@ function FestivalCard({ festival }) {
 function StrategyMessage({ text, onViewStrategy }) {
   const strategy = parseStrategy(text)
   const intro    = getIntro(text)
+  const [view, setView] = useState('cards')
+
   if (!strategy) return <div className={`${styles.msgBubble} ${styles.agentBubble}`}>{renderMarkdown(text)}</div>
-  const total = flatFestivals(strategy).length
+
+  const all   = flatFestivals(strategy)
+  const total = all.length
+  const deadlineGroups = groupByDeadline(all)
+
   return (
     <div className={styles.strategyBlock}>
-      {intro && <p className={styles.strategyIntro}>{intro}</p>}
-      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
-        const meta = TIER_META[tier.tier] || { label: tier.label, color: '#aaa' }
-        const tierCls = tier.tier === 'A' ? styles.tierA : tier.tier === 'B' ? styles.tierB : styles.tierC
-        return (
-          <div key={tier.tier} className={styles.tierSection}>
-            <div className={`${styles.tierHeader} ${tierCls}`}>
-              <span className={styles.tierBadge}>{tier.tier}</span>
-              <span className={styles.tierLabel}>{tier.label || meta.label}</span>
-            </div>
-            <div className={styles.festGrid}>
-              {tier.festivals.map((f, i) => <FestivalCard key={i} festival={f} />)}
-            </div>
+      {intro && <p className={styles.strategyIntroLight}>{intro}</p>}
+
+      {/* Stats */}
+      <div className={styles.stratStats}>
+        <div className={styles.stratStat}>
+          <span className={styles.stratStatNum}>{total}</span>
+          <span className={styles.stratStatLabel}>Festivals</span>
+        </div>
+        <div className={styles.stratStat}>
+          <span className={styles.stratStatNum}>{strategy.tiers.filter(t => t.festivals?.length > 0).length}</span>
+          <span className={styles.stratStatLabel}>Tiers</span>
+        </div>
+        {deadlineGroups.length > 0 && (
+          <div className={styles.stratStat}>
+            <span className={styles.stratStatNum}>{deadlineGroups.length}</span>
+            <span className={styles.stratStatLabel}>Deadlines</span>
           </div>
-        )
-      })}
-      {strategy.closing && <p className={styles.strategyClosing}>{strategy.closing}</p>}
+        )}
+      </div>
+
+      {/* View tabs */}
+      <div className={styles.viewTabs}>
+        {[
+          { key: 'cards',    label: 'Cards',    icon: <LayoutGrid size={12} /> },
+          { key: 'timeline', label: 'Timeline', icon: <Layers size={12} /> },
+          { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} /> },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            className={`${styles.viewTab} ${view === tab.key ? styles.viewTabActive : ''}`}
+            onClick={() => setView(tab.key)}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        <motion.div key={view} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
+          {view === 'cards'    && <CardsView strategy={strategy} />}
+          {view === 'timeline' && <TimelineView festivals={all} />}
+          {view === 'calendar' && <CalendarView groups={deadlineGroups} all={all} />}
+        </motion.div>
+      </AnimatePresence>
+
+      {strategy.closing && <p className={styles.strategyClosingLight}>{strategy.closing}</p>}
+
       <motion.button className={styles.viewStrategyBtn} onClick={() => onViewStrategy(strategy)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
         <LayoutGrid size={13} />
-        View Full Strategy — {total} festivals
+        Full Dashboard — {total} festivals
         <span className={styles.viewStrategyArrow}>→</span>
       </motion.button>
     </div>
@@ -1196,7 +1376,14 @@ export default function Laurel() {
             {loading && (
               <div className={styles.typingRow}>
                 <div className={styles.typingBubble}>
-                  <span className={styles.typingText}>Thinking<span className={styles.typingCursor}>_</span></span>
+                  <div className="generating-loader-wrapper">
+                    <div className="generating-loader-text">
+                      {'Analyzing...'.split('').map((ch, i) => (
+                        <span key={i} className="generating-loader-letter" style={{ animationDelay: `${i * 0.07}s` }}>{ch}</span>
+                      ))}
+                    </div>
+                    <div className="generating-loader-bar" />
+                  </div>
                 </div>
               </div>
             )}
