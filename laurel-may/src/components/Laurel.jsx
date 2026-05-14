@@ -463,39 +463,85 @@ const TIER_BADGE2      = { A: styles.timelineBadgeA, B: styles.timelineBadgeB, C
 const TIER_CHIP_CLASS  = { A: styles.calendarChipA,  B: styles.calendarChipB,  C: styles.calendarChipC  }
 const TIER_CHIP_NAME   = { A: styles.calendarChipNameA, B: styles.calendarChipNameB, C: styles.calendarChipNameC }
 
+const TIER_ACCENT = { A: '#FF5200', B: '#d97706', C: '#9ca3af' }
+
 function FestivalCardV2({ festival, tier }) {
   const [showTips, setShowTips] = useState(false)
+  const color = TIER_ACCENT[tier] || '#9ca3af'
+
   return (
-    <div className={`${styles.festCardNew} ${TIER_CARD_CLASS[tier] || styles.festCardNewC}`}>
-      <div className={styles.festCardTop}>
-        <div>
-          <div className={styles.festCardNameNew}>{festival.name}</div>
-          {festival.location && <div className={styles.festCardLocNew}>{festival.location}</div>}
+    <div style={{ background: '#fff', borderTop: '1px solid #ede8e1', borderLeft: `2px solid ${color}` }}>
+
+      {/* Name — dominant element */}
+      <div style={{ padding: '16px 16px 10px 14px' }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: '#1a1008', letterSpacing: '0.02em', textTransform: 'uppercase', lineHeight: 1 }}>
+          {festival.name}
         </div>
-        <div className={styles.festCardDates}>
-          {festival.submit_by && (
-            <span className={`${styles.festDateChip} ${styles.festDateChipSubmit}`}>↑ {festival.submit_by}</span>
-          )}
-          {festival.festival_date && (
-            <span className={`${styles.festDateChip} ${styles.festDateChipFest}`}>★ {festival.festival_date}</span>
-          )}
-        </div>
+        {festival.location && (
+          <div style={{ fontSize: 10, color: '#b8a898', marginTop: 4, fontFamily: "'Geist Mono', monospace", letterSpacing: '0.05em' }}>
+            {festival.location}
+          </div>
+        )}
       </div>
-      {festival.reason && <p className={styles.festReasonNew}>{festival.reason}</p>}
+
+      {/* Dates — plain label / value rows */}
+      {(festival.submit_by || festival.festival_date) && (
+        <>
+          <div style={{ height: 1, background: '#ede8e1', margin: '0 14px' }} />
+          <div style={{ padding: '10px 16px 10px 14px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {festival.submit_by && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 9, color: '#b8a898', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'Geist Mono', monospace" }}>Submit by</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#FF5200', fontFamily: "'Inter', sans-serif" }}>{festival.submit_by}</span>
+              </div>
+            )}
+            {festival.festival_date && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 9, color: '#b8a898', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'Geist Mono', monospace" }}>Festival</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1008', fontFamily: "'Inter', sans-serif" }}>{festival.festival_date}</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Why */}
+      {festival.reason && (
+        <>
+          <div style={{ height: 1, background: '#ede8e1', margin: '0 14px' }} />
+          <div style={{ padding: '10px 16px 14px 14px' }}>
+            <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: color, marginBottom: 6, fontFamily: "'Geist Mono', monospace" }}>
+              Why
+            </div>
+            <p style={{ fontSize: 12, lineHeight: 1.65, color: '#7a6655', margin: 0, fontFamily: "'Inter', sans-serif" }}>
+              {festival.reason}
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Notes */}
       {festival.tips?.length > 0 && (
         <>
-          {showTips ? (
-            <div className={styles.festTipsNew}>
-              {festival.tips.map((tip, i) => <span key={i} className={styles.festTipChip}>{tip}</span>)}
-            </div>
-          ) : null}
-          <button
-            onClick={() => setShowTips(p => !p)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 0', fontSize: 10, color: 'rgba(54,65,83,0.35)', fontFamily: "'Geist Mono', monospace", letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 4 }}
-          >
-            <span style={{ fontSize: 8, lineHeight: 1 }}>{showTips ? '▲' : '▼'}</span>
-            {showTips ? 'HIDE' : `${festival.tips.length} NOTES`}
-          </button>
+          <div style={{ height: 1, background: '#ede8e1', margin: '0 14px' }} />
+          <div style={{ padding: '8px 16px 12px 14px' }}>
+            {showTips && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                {festival.tips.map((tip, i) => (
+                  <span key={i} style={{ padding: '3px 8px', background: 'rgba(0,0,0,0.04)', border: '1px solid #ede8e1', borderRadius: 100, fontSize: 10, color: '#7a6655', fontFamily: "'Geist Mono', monospace" }}>
+                    {tip}
+                  </span>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowTips(p => !p)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 9, color: '#b8a898', fontFamily: "'Geist Mono', monospace", letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 3 }}
+            >
+              <span style={{ fontSize: 7 }}>{showTips ? '▲' : '▼'}</span>
+              {showTips ? 'HIDE' : `${festival.tips.length} NOTES`}
+            </button>
+          </div>
         </>
       )}
     </div>
@@ -504,19 +550,22 @@ function FestivalCardV2({ festival, tier }) {
 
 function CardsView({ strategy }) {
   return (
-    <div className={styles.cardsView}>
-      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => (
-        <div key={tier.tier} className={styles.tierBlock}>
-          <div className={styles.tierBlockHead}>
-            <span className={`${styles.tierBlockBadge} ${TIER_BADGE_CLASS[tier.tier] || styles.tierBlockBadgeC}`}>{tier.tier}</span>
-            <span className={styles.tierBlockTitle}>{tier.label}</span>
-            <span style={{ fontSize: 10, color: 'rgba(54,65,83,0.3)', fontFamily: "'Geist Mono', monospace" }}>{tier.festivals.length}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
+        const color = TIER_ACCENT[tier.tier] || '#9ca3af'
+        return (
+          <div key={tier.tier}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #ede8e1' }}>
+              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: color, letterSpacing: '0.1em' }}>TIER {tier.tier}</span>
+              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#b8a898', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{tier.label}</span>
+              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#c4b8ac', marginLeft: 'auto' }}>{tier.festivals.length}</span>
+            </div>
+            <div style={{ border: '1px solid #ede8e1', borderRadius: 8, overflow: 'hidden' }}>
+              {tier.festivals.map((f, i) => <FestivalCardV2 key={i} festival={f} tier={tier.tier} />)}
+            </div>
           </div>
-          <div className={styles.festCards}>
-            {tier.festivals.map((f, i) => <FestivalCardV2 key={i} festival={f} tier={tier.tier} />)}
-          </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
