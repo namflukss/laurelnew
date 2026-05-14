@@ -1103,7 +1103,7 @@ function StrategyMessage({ text, onViewStrategy }) {
   return (
     <div className={styles.strategyBlock}>
       {intro && (
-        <p style={{ fontSize: 15, color: '#1f2937', lineHeight: 1.7, fontFamily: "'Inter', sans-serif", fontWeight: 400, padding: '0 2px', margin: 0 }}>
+        <p style={{ fontSize: 15, color: '#1a1008', lineHeight: 1.75, fontFamily: "Georgia, 'Times New Roman', serif", fontWeight: 400, padding: '0 2px', margin: 0, fontStyle: 'italic' }}>
           {intro}
         </p>
       )}
@@ -1676,33 +1676,34 @@ export default function Laurel() {
           )}
           <div className={styles.messages} style={!apiKey ? { display: 'none' } : {}}>
             {messages.length === 0 && !loading && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '40px 24px 24px' }}>
-                <div style={{ marginBottom: 36, textAlign: 'center' }}>
-                  <LaurelMark size={30} />
-                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(54,65,83,0.28)', marginTop: 14, marginBottom: 10 }}>
-                    Film Festival Strategy
+              <div style={{ flex: 1, padding: '52px 36px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: 540 }}>
+                <div style={{ marginBottom: 28 }}>
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#b8a898', marginBottom: 12 }}>
+                    Circuit Intelligence — No active production
                   </div>
-                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
-                    Tell me about your film.
-                  </h2>
+                  <div style={{ height: 2, background: '#1a1008', marginBottom: 16 }} />
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 40, fontWeight: 700, color: '#1a1008', textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: 1 }}>
+                    Select a coverage type.
+                  </div>
                 </div>
-                <div style={{ width: '100%', maxWidth: 440 }}>
+                <div>
                   {STARTERS.map((s, i) => (
                     <button
                       key={i}
                       onClick={() => { setInput(s.template); setTimeout(() => textareaRef.current?.focus(), 50) }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', borderRadius: 10, width: '100%' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+                      style={{ display: 'flex', alignItems: 'baseline', width: '100%', padding: '12px 0', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: '1px solid #ede8e1', background: 'transparent', cursor: 'pointer', textAlign: 'left', gap: 0, transition: 'background 0.1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#faf9f7'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#FF5200', opacity: 0.55, width: 18, flexShrink: 0, textAlign: 'right' }}>
+                      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 700, color: '#1a1008', textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1 }}>
+                        {s.label}
+                      </span>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: '#d6cfc8', flex: 1, overflow: 'hidden', whiteSpace: 'nowrap', margin: '0 8px', letterSpacing: '0.04em' }}>
+                        {'· · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · · ·'}
+                      </span>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b8a898', flexShrink: 0 }}>
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: '#1f2937', lineHeight: 1.25 }}>{s.label}</div>
-                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'rgba(54,65,83,0.36)', marginTop: 2 }}>{s.desc}</div>
-                      </div>
-                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: 'rgba(54,65,83,0.18)', flexShrink: 0 }}>→</span>
                     </button>
                   ))}
                 </div>
@@ -1712,13 +1713,20 @@ export default function Laurel() {
             {messages.map((m, i) => {
               if (m.role === 'user') return (
                 <div key={i} className={`${styles.msgRow} ${styles.user}`}>
-                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.12em', color: 'rgba(54,65,83,0.3)', textTransform: 'uppercase', marginBottom: 6, paddingRight: 4 }}>You</div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#364153', lineHeight: 1.65, maxWidth: '80%', textAlign: 'right', whiteSpace: 'pre-wrap' }}>{m.text}</div>
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, letterSpacing: '0.16em', color: '#c4b8ac', textTransform: 'uppercase', marginBottom: 5, paddingRight: 2 }}>
+                    FILMMAKER — {String(i + 1).padStart(3, '0')}
+                  </div>
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 13, color: '#3a3028', lineHeight: 1.7, maxWidth: '80%', textAlign: 'right', whiteSpace: 'pre-wrap' }}>{m.text}</div>
                 </div>
               )
               return (
                 <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
-                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.12em', color: '#FF5200', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 2, opacity: 0.7 }}>Laurel</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, letterSpacing: '0.18em', color: '#FF5200', textTransform: 'uppercase', flexShrink: 0 }}>
+                      CIRCUIT ANALYSIS
+                    </div>
+                    <div style={{ flex: 1, height: 1, background: '#ede8e1' }} />
+                  </div>
                   <StrategyMessage text={m.text} onViewStrategy={s => { setActiveStrategy(s); setMode('strategy') }} />
                 </div>
               )
@@ -1726,15 +1734,12 @@ export default function Laurel() {
 
             {loading && (
               <div className={styles.typingRow}>
-                <div className={styles.typingBubble}>
-                  <div className="generating-loader-wrapper">
-                    <div className="generating-loader-text">
-                      {'Analyzing...'.split('').map((ch, i) => (
-                        <span key={i} className="generating-loader-letter" style={{ animationDelay: `${i * 0.07}s` }}>{ch}</span>
-                      ))}
-                    </div>
-                    <div className="generating-loader-bar" />
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, letterSpacing: '0.18em', color: '#FF5200', textTransform: 'uppercase' }}>CIRCUIT ANALYSIS</div>
+                  <div style={{ flex: 1, height: 1, background: '#ede8e1' }} />
+                </div>
+                <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 12, color: '#b8a898', letterSpacing: '0.08em' }}>
+                  Reviewing circuit<span style={{ animation: 'ellipsis 1.4s infinite steps(4, end)' }}>...</span>
                 </div>
               </div>
             )}
@@ -1766,7 +1771,7 @@ export default function Laurel() {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setInputFocused(false)}
-                placeholder="⊕  Tell me about your film…"
+                placeholder="Describe your film or paste a brief…"
                 rows={1}
               />
               <button
