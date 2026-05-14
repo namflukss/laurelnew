@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Geist+Mono:wght@400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #0A0503;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Quantum Pulse Loader ───────────────────────────────────────────────────── */
+
+.generating-loader-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.generating-loader-text {
+  display: flex;
+  gap: 0px;
+  perspective: 120px;
+}
+
+.generating-loader-letter {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(54, 65, 83, 0.6);
+  animation: generating-loader-letter-anim 2.4s ease-in-out infinite;
+  display: inline-block;
+}
+
+.generating-loader-letter:nth-child(1)  { animation-delay: 0.00s; }
+.generating-loader-letter:nth-child(2)  { animation-delay: 0.07s; }
+.generating-loader-letter:nth-child(3)  { animation-delay: 0.14s; }
+.generating-loader-letter:nth-child(4)  { animation-delay: 0.21s; }
+.generating-loader-letter:nth-child(5)  { animation-delay: 0.28s; }
+.generating-loader-letter:nth-child(6)  { animation-delay: 0.35s; }
+.generating-loader-letter:nth-child(7)  { animation-delay: 0.42s; }
+.generating-loader-letter:nth-child(8)  { animation-delay: 0.49s; }
+.generating-loader-letter:nth-child(9)  { animation-delay: 0.56s; }
+.generating-loader-letter:nth-child(10) { animation-delay: 0.63s; }
+.generating-loader-letter:nth-child(11) { animation-delay: 0.70s; }
+.generating-loader-letter:nth-child(12) { animation-delay: 0.77s; }
+
+.generating-loader-bar {
+  width: 150px;
+  height: 2px;
+  background: rgba(54, 65, 83, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.generating-loader-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, #FF5200, transparent);
+  border-radius: 2px;
+  animation: generating-loader-bar-anim 1.8s ease-in-out infinite;
+}
+
+@keyframes generating-loader-letter-anim {
+  0%   { opacity: 0; transform: translateY(14px) rotateX(-90deg); }
+  12%  { opacity: 1; transform: translateY(0)    rotateX(0deg); }
+  35%  { opacity: 1; transform: translateY(0)    rotateX(0deg); }
+  55%  { opacity: 0; transform: translateY(-14px) rotateX(90deg); }
+  100% { opacity: 0; }
+}
+
+@keyframes generating-loader-bar-anim {
+  0%   { left: -55%; }
+  100% { left: 110%; }
+}
