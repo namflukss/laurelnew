@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid, Plus, ArrowUp, X, FileText } from 'lucide-react'
+import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid, Plus, ArrowUp, X, FileText, Globe2, Film } from 'lucide-react'
+import * as THREE from 'three'
 import styles from './Laurel.module.css'
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -501,6 +502,8 @@ function StrategyDashboard({ strategy, onBack }) {
               { key: 'cards',    label: 'Cards',    icon: <LayoutGrid size={12} /> },
               { key: 'timeline', label: 'Timeline', icon: <Layers size={12} /> },
               { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} /> },
+              { key: 'globe',    label: 'Globe',    icon: <Globe2 size={12} /> },
+              { key: 'gallery',  label: 'Gallery',  icon: <Film size={12} /> },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -518,6 +521,8 @@ function StrategyDashboard({ strategy, onBack }) {
           {view === 'cards'    && <CardsView strategy={strategy} />}
           {view === 'timeline' && <TimelineView festivals={allFestivals} />}
           {view === 'calendar' && <CalendarView groups={deadlineGroups} all={allFestivals} />}
+          {view === 'globe'    && <GlobeView festivals={allFestivals} />}
+          {view === 'gallery'  && <GalleryView strategy={strategy} />}
         </div>
       </div>
     </div>
@@ -640,184 +645,290 @@ function CardsView({ strategy }) {
   )
 }
 
-// ─── Strategy Globe ───────────────────────────────────────────────────────────
+// ─── Three.js Globe View ─────────────────────────────────────────────────────
 
-function StrategyGlobe({ festivals, hoveredName }) {
-  const canvasRef = useRef(null)
-  const stateRef  = useRef({ rotY: 0.3, targetY: 0.3, dragging: false, lastX: 0 })
-  const festRef   = useRef(festivals)
-  const hovRef    = useRef(hoveredName)
-  festRef.current = festivals
-  hovRef.current  = hoveredName
+function GlobeView({ festivals }) {
+  const mountRef   = useRef(null)
+  const activePinRef = useRef(null)
+  const [activeId, setActiveId] = useState(null)
+  const festWithCoords = festivals.filter(f => findFestCoords(f.name))
+
+  useEffect(() => { activePinRef.current = activeId }, [activeId])
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    let raf = 0
+    const mount = mountRef.current
+    if (!mount) return
 
-    function resize() {
-      const rect = canvas.getBoundingClientRect()
-      canvas.width  = Math.max(2, Math.floor(rect.width))  * window.devicePixelRatio
-      canvas.height = Math.max(2, Math.floor(rect.height)) * window.devicePixelRatio
-    }
+    const scene  = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera(36, mount.clientWidth / mount.clientHeight, 0.1, 100)
+    camera.position.set(0, 0.4, 3.6)
 
-    function project(lat, lng, rotY, cx, cy, r) {
-      const phi   = (90 - lat) * Math.PI / 180
-      const theta = (lng + 180) * Math.PI / 180 + rotY
-      const x = -Math.sin(phi) * Math.cos(theta)
-      const y =  Math.cos(phi)
-      const z =  Math.sin(phi) * Math.sin(theta)
-      if (z < -0.05) return null
-      return { x: cx + x * r, y: cy - y * r, depth: z }
-    }
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.setClearColor(0x000000, 0)
+    mount.appendChild(renderer.domElement)
 
-    function draw() {
-      const { rotY } = stateRef.current
-      const W = canvas.width, H = canvas.height
-      ctx.clearRect(0, 0, W, H)
+    const gGroup = new THREE.Group()
+    scene.add(gGroup)
 
-      const cx = W / 2, cy = H / 2
-      const r  = Math.min(W, H) * 0.40
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55))
+    const gDir = new THREE.DirectionalLight(0xffe6c2, 1.1)
+    gDir.position.set(3, 2, 4); scene.add(gDir)
+    const gRim = new THREE.DirectionalLight(0xffffff, 0.45)
+    gRim.position.set(-4, 0, -2); scene.add(gRim)
 
-      // Background sphere glow
-      const grad = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r)
-      grad.addColorStop(0, 'rgba(255,82,0,0.07)')
-      grad.addColorStop(1, 'rgba(0,0,0,0)')
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.fillStyle = grad; ctx.fill()
+    // Globe sphere
+    gGroup.add(new THREE.Mesh(
+      new THREE.SphereGeometry(1, 64, 64),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0.05, transparent: true, opacity: 0.10 })
+    ))
+    // Wireframe lattice
+    gGroup.add(new THREE.LineSegments(
+      new THREE.WireframeGeometry(new THREE.SphereGeometry(1.001, 28, 16)),
+      new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.20 })
+    ))
 
-      // Globe outline
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
-      ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1; ctx.stroke()
-
-      // Latitude rings
-      for (let lat = -60; lat <= 60; lat += 30) {
-        const pts = []
-        for (let lng = -180; lng <= 182; lng += 3) {
-          const p = project(lat, lng, rotY, cx, cy, r)
-          if (p) pts.push(p)
-        }
-        if (pts.length < 2) continue
-        ctx.beginPath()
-        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
-        ctx.strokeStyle = lat === 0 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'
-        ctx.lineWidth = lat === 0 ? 0.8 : 0.4; ctx.stroke()
+    function addRing(r, y, opacity) {
+      const pts = []
+      for (let i = 0; i <= 128; i++) {
+        const a = (i / 128) * Math.PI * 2
+        pts.push(new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r))
       }
+      gGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity })
+      ))
+    }
+    addRing(1.001, 0, 0.55)
+    addRing(Math.cos(Math.PI * 0.13) * 1.001,  Math.sin(Math.PI * 0.13),  0.18)
+    addRing(Math.cos(Math.PI * 0.13) * 1.001, -Math.sin(Math.PI * 0.13),  0.18)
 
-      // Longitude lines
-      for (let lng = -180; lng < 180; lng += 30) {
-        const pts = []
-        for (let lat = -80; lat <= 80; lat += 4) {
-          const p = project(lat, lng, rotY, cx, cy, r)
-          if (p) pts.push(p)
-        }
-        if (pts.length < 2) continue
-        ctx.beginPath()
-        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
-        ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 0.4; ctx.stroke()
-      }
-
-      // Festival pins
-      const TCOLOR = { A: '#FF5200', B: '#FAC703', C: '#9ca3af' }
-      const visible = []
-      festRef.current.forEach(f => {
-        const coords = findFestCoords(f.name)
-        if (!coords) return
-        const p = project(coords.lat, coords.lng, rotY, cx, cy, r)
-        if (!p) return
-        visible.push({ ...p, name: f.name, tier: f.tier })
-      })
-
-      // Sort back-to-front
-      visible.sort((a, b) => a.depth - b.depth)
-
-      visible.forEach(({ x, y, depth, name, tier }) => {
-        const color    = TCOLOR[tier] || '#FAC703'
-        const isHov    = hovRef.current === name
-        const alpha    = Math.min(1, depth * 1.5 + 0.4)
-        const dotR     = isHov ? 5 : 3.5
-
-        ctx.globalAlpha = alpha
-
-        // Halo pulse on hover
-        if (isHov) {
-          ctx.beginPath(); ctx.arc(x, y, dotR * 2.8, 0, Math.PI * 2)
-          ctx.fillStyle = color + '28'; ctx.fill()
-          ctx.beginPath(); ctx.arc(x, y, dotR * 1.7, 0, Math.PI * 2)
-          ctx.fillStyle = color + '50'; ctx.fill()
-        }
-
-        // Dot
-        ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2)
-        ctx.fillStyle = color; ctx.fill()
-
-        // Label on hover
-        if (isHov) {
-          ctx.globalAlpha = Math.min(1, alpha * 1.4)
-          ctx.font = `bold 11px "Barlow Condensed", "Inter", sans-serif`
-          ctx.fillStyle = color
-          ctx.textBaseline = 'middle'
-          ctx.fillText(name.toUpperCase(), x + dotR + 5, y)
-        }
-
-        ctx.globalAlpha = 1
-      })
+    function latLngToVec3(lat, lng, r) {
+      const phi   = (90 - lat)  * (Math.PI / 180)
+      const theta = (lng + 180) * (Math.PI / 180)
+      return new THREE.Vector3(
+        -r * Math.sin(phi) * Math.cos(theta),
+         r * Math.cos(phi),
+         r * Math.sin(phi) * Math.sin(theta)
+      )
     }
 
-    function tick() {
-      raf = requestAnimationFrame(tick)
-      const s = stateRef.current
-      if (!s.dragging) s.targetY += 0.0018
-      s.rotY += (s.targetY - s.rotY) * 0.07
-      draw()
+    function makeLabelSprite(text) {
+      const c = document.createElement('canvas')
+      c.width = 512; c.height = 128
+      const ctx = c.getContext('2d')
+      ctx.clearRect(0, 0, 512, 128)
+      ctx.font = 'bold 64px "Barlow Condensed", sans-serif'
+      ctx.fillStyle = '#ffffff'
+      ctx.textBaseline = 'middle'
+      ctx.textAlign = 'left'
+      ctx.fillText(text.toUpperCase(), 16, 64)
+      const tex = new THREE.CanvasTexture(c)
+      tex.minFilter = THREE.LinearFilter
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }))
+      sp.scale.set(0.7, 0.175, 1)
+      return sp
     }
 
-    function onDown(e) {
-      stateRef.current.dragging = true
-      stateRef.current.lastX = e.clientX
-    }
-    function onMove(e) {
-      if (!stateRef.current.dragging) return
-      stateRef.current.targetY += (e.clientX - stateRef.current.lastX) * 0.005
-      stateRef.current.lastX = e.clientX
-    }
-    function onUp() { stateRef.current.dragging = false }
+    const TIER_HEX = { A: 0xFF5200, B: 0xFAC703, C: 0x9ca3af }
+    const PIN_R = 0.022
+    const pins  = {}
 
-    canvas.addEventListener('pointerdown', onDown)
-    canvas.addEventListener('pointermove', onMove)
-    canvas.addEventListener('pointerup', onUp)
-    canvas.addEventListener('pointerleave', onUp)
+    festWithCoords.forEach(f => {
+      const coords = findFestCoords(f.name)
+      if (!coords) return
+      const pos   = latLngToVec3(coords.lat, coords.lng, 1.0)
+      const tip   = latLngToVec3(coords.lat, coords.lng, 1.08)
+      const color = TIER_HEX[f.tier] || 0xFAC703
 
+      gGroup.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([pos, tip]),
+        new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 })
+      ))
+      const head = new THREE.Mesh(new THREE.SphereGeometry(PIN_R, 16, 16), new THREE.MeshBasicMaterial({ color }))
+      head.position.copy(tip); gGroup.add(head)
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(PIN_R * 2.4, 16, 16), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.18 }))
+      halo.position.copy(tip); gGroup.add(halo)
+      const label = makeLabelSprite(f.name)
+      label.position.copy(latLngToVec3(coords.lat, coords.lng, 1.22)); gGroup.add(label)
+      pins[f.name] = { head, halo, label, tier: f.tier }
+    })
+
+    let gRotY = 0.3, gRotX = -0.05, gTargetY = 0.3, gTargetX = -0.05
+    let isDragging = false, lastX = 0, lastY = 0, autoSpin = true
+
+    const el = renderer.domElement
+    el.addEventListener('pointerdown', e => { isDragging = true; lastX = e.clientX; lastY = e.clientY; autoSpin = false; el.setPointerCapture(e.pointerId) })
+    el.addEventListener('pointermove', e => {
+      if (!isDragging) return
+      gTargetY += (e.clientX - lastX) * 0.005
+      gTargetX += (e.clientY - lastY) * 0.005
+      gTargetX = Math.max(-1.2, Math.min(1.2, gTargetX))
+      lastX = e.clientX; lastY = e.clientY
+    })
+    el.addEventListener('pointerup', e => { isDragging = false; try { el.releasePointerCapture(e.pointerId) } catch(_) {} })
+    el.addEventListener('pointerleave', () => { isDragging = false })
+
+    const resize = () => {
+      const w = Math.max(2, mount.clientWidth)
+      const h = Math.max(2, mount.clientHeight)
+      renderer.setSize(w, h, false)
+      camera.aspect = w / h
+      camera.updateProjectionMatrix()
+    }
     const ro = new ResizeObserver(resize)
-    ro.observe(canvas)
+    ro.observe(mount)
     resize()
-    tick()
+
+    let raf = 0
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      if (autoSpin) gTargetY += 0.0015
+      gRotY += (gTargetY - gRotY) * 0.08
+      gRotX += (gTargetX - gRotX) * 0.08
+      gGroup.rotation.y = gRotY
+      gGroup.rotation.x = gRotX
+      const t = performance.now() * 0.002
+      const active = activePinRef.current
+      Object.entries(pins).forEach(([name, p], i) => {
+        const phase = (Math.sin(t + i * 0.7) + 1) * 0.5
+        const isActive = active === name
+        p.halo.scale.setScalar(1 + phase * (isActive ? 0.6 : 0.3))
+        p.halo.material.opacity = (isActive ? 0.35 : 0.18) - phase * 0.08
+        p.head.material.color.set(isActive ? 0xffffff : (TIER_HEX[p.tier] || 0xFAC703))
+      })
+      renderer.render(scene, camera)
+    }
+    raf = requestAnimationFrame(tick)
 
     return () => {
       cancelAnimationFrame(raf)
       ro.disconnect()
-      canvas.removeEventListener('pointerdown', onDown)
-      canvas.removeEventListener('pointermove', onMove)
-      canvas.removeEventListener('pointerup', onUp)
-      canvas.removeEventListener('pointerleave', onUp)
+      renderer.dispose()
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
     }
   }, [])
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        width: '100%', height: 200, display: 'block',
-        background: '#0a0503', borderRadius: 10, cursor: 'grab',
-      }}
-    />
+    <div style={{ borderRadius: 12, overflow: 'hidden', background: 'linear-gradient(160deg, #FF5200 0%, #8a0000 100%)', position: 'relative', minHeight: 380, display: 'flex', flexDirection: 'column' }}>
+      {/* Atmospheric layers */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 45%, rgba(255,160,80,0.30) 0%, transparent 60%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 120% 100% at 50% 110%, rgba(80,5,0,0.85) 0%, transparent 60%)' }} />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)', backgroundSize: '80px 80px', maskImage: 'radial-gradient(ellipse 80% 60% at 50% 50%, #000 30%, transparent 75%)' }} />
+      </div>
+
+      {/* Top bar */}
+      <div style={{ position: 'relative', zIndex: 5, padding: '18px 20px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 6, height: 6, background: '#fff', borderRadius: '50%' }} />
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.85)', textTransform: 'uppercase' }}>
+          Strategy Circuit — {festWithCoords.length} locations mapped
+        </span>
+      </div>
+
+      {/* Main area: globe + list */}
+      <div style={{ flex: 1, display: 'flex', position: 'relative', zIndex: 2, minHeight: 300 }}>
+        {/* Globe canvas */}
+        <div ref={mountRef} style={{ flex: 1, cursor: 'grab', minHeight: 300 }} />
+
+        {/* Festival list */}
+        <div style={{ width: 170, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+            // The Circuit
+          </div>
+          {festivals.map((f, i) => {
+            const hasPin = !!findFestCoords(f.name)
+            const isActive = activeId === f.name
+            return (
+              <button
+                key={i}
+                onClick={() => hasPin && setActiveId(f.name === activeId ? null : f.name)}
+                style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 8, alignItems: 'baseline', padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', background: 'none', border: 'none', cursor: hasPin ? 'pointer' : 'default', width: '100%', textAlign: 'left' }}
+              >
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.4)', width: 18 }}>{String(i + 1).padStart(2, '0')}</span>
+                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: '0.04em', color: isActive ? '#FAC703' : (hasPin ? '#fff' : 'rgba(255,255,255,0.45)'), textTransform: 'uppercase', lineHeight: 1.1 }}>
+                  {f.name}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Bottom bar */}
+      <div style={{ position: 'relative', zIndex: 5, padding: '10px 20px 16px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          {festivals.map((f, i) => (
+            <span key={i} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, letterSpacing: '0.06em', color: findFestCoords(f.name) ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>
+              {f.name}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Gallery View ─────────────────────────────────────────────────────────────
+
+const GALLERY_PALETTES = [
+  { bg: '#1b3a36', accent: '#FF5200' },
+  { bg: '#3a2a1c', accent: '#FAC703' },
+  { bg: '#1c2a3a', accent: '#5aa9e9' },
+  { bg: '#3a1c2a', accent: '#c97aa7' },
+  { bg: '#2a2a1c', accent: '#cfcf6a' },
+  { bg: '#2a1c2a', accent: '#b85cd6' },
+  { bg: '#1c2a2a', accent: '#5acfcf' },
+  { bg: '#2a1a0a', accent: '#FF8C00' },
+  { bg: '#1a2a1a', accent: '#7ecf5a' },
+]
+
+function GalleryView({ strategy }) {
+  const all = flatFestivals(strategy)
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
+      {all.map((f, i) => {
+        const { bg, accent } = GALLERY_PALETTES[i % GALLERY_PALETTES.length]
+        return (
+          <div key={i} style={{ background: bg, borderRadius: 10, overflow: 'hidden', position: 'relative', minHeight: 168, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at top left, ${accent}28 0%, transparent 65%)`, pointerEvents: 'none' }} />
+            <div style={{ position: 'relative', padding: '14px 14px 12px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: accent, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  TIER {f.tier}
+                </div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1 }}>
+                  {f.name}
+                </div>
+                {f.location && (
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.38)', marginTop: 5, letterSpacing: '0.04em' }}>
+                    {f.location}
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: 14 }}>
+                {f.submit_by && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Submit</span>
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: accent, letterSpacing: '0.02em' }}>{f.submit_by}</span>
+                  </div>
+                )}
+                {f.festival_date && (
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Festival</span>
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.02em' }}>{f.festival_date}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
 function TimelineView({ festivals }) {
-  const [hoveredName, setHoveredName] = useState(null)
-
   const sorted    = [...festivals].filter(f => f.submit_by).sort((a, b) => {
     const pa = parseMonthYear(a.submit_by)
     const pb = parseMonthYear(b.submit_by)
@@ -827,74 +938,59 @@ function TimelineView({ festivals }) {
   const groups    = groupByDeadline(sorted)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {/* Globe */}
-      <StrategyGlobe festivals={festivals} hoveredName={hoveredName} />
-
-      {/* Timeline list */}
-      <div className={styles.timelineView}>
-        {groups.map((group, gi) => (
-          <div key={group.key} className={styles.timelineGroup}>
-            <div className={styles.timelineMonthHead}>
-              <span className={styles.timelineMonthLabel}>{MONTH_FULL[group.month]} {group.year}</span>
-              <div className={styles.timelineMonthLine} />
-            </div>
-            {group.festivals.map((f, fi) => {
-              const isLast = fi === group.festivals.length - 1 && gi === groups.length - 1 && ungrouped.length === 0
-              const hasCoords = !!findFestCoords(f.name)
-              return (
-                <div
-                  key={fi}
-                  className={styles.timelineItem}
-                  onMouseEnter={() => hasCoords && setHoveredName(f.name)}
-                  onMouseLeave={() => setHoveredName(null)}
-                >
-                  <div className={styles.timelineDotCol}>
-                    <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
-                    {!isLast && <div className={styles.timelineConnector} />}
-                  </div>
-                  <div className={styles.timelineContent} style={hoveredName === f.name ? { borderColor: TIER_ACCENT[f.tier] || '#9ca3af' } : {}}>
-                    <div className={styles.timelineTop}>
-                      <div>
-                        <span className={styles.timelineName}>{f.name}</span>
-                        {f.location && <span className={styles.timelineLoc}>{f.location}</span>}
-                      </div>
-                      <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
-                    </div>
-                    {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
-                    {f.festival_date && <div className={styles.timelineFestDate}>Festival: {f.festival_date}</div>}
-                  </div>
-                </div>
-              )
-            })}
+    <div className={styles.timelineView}>
+      {groups.map((group, gi) => (
+        <div key={group.key} className={styles.timelineGroup}>
+          <div className={styles.timelineMonthHead}>
+            <span className={styles.timelineMonthLabel}>{MONTH_FULL[group.month]} {group.year}</span>
+            <div className={styles.timelineMonthLine} />
           </div>
-        ))}
-        {ungrouped.length > 0 && (
-          <div className={styles.timelineGroup}>
-            <div className={styles.timelineMonthHead}>
-              <span className={styles.timelineMonthLabel}>No deadline</span>
-              <div className={styles.timelineMonthLine} />
-            </div>
-            {ungrouped.map((f, i) => (
-              <div key={i} className={styles.timelineItem}
-                onMouseEnter={() => findFestCoords(f.name) && setHoveredName(f.name)}
-                onMouseLeave={() => setHoveredName(null)}
-              >
+          {group.festivals.map((f, fi) => {
+            const isLast = fi === group.festivals.length - 1 && gi === groups.length - 1 && ungrouped.length === 0
+            return (
+              <div key={fi} className={styles.timelineItem}>
                 <div className={styles.timelineDotCol}>
                   <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
+                  {!isLast && <div className={styles.timelineConnector} />}
                 </div>
-                <div className={styles.timelineContent} style={hoveredName === f.name ? { borderColor: TIER_ACCENT[f.tier] || '#9ca3af' } : {}}>
+                <div className={styles.timelineContent}>
                   <div className={styles.timelineTop}>
-                    <span className={styles.timelineName}>{f.name}</span>
+                    <div>
+                      <span className={styles.timelineName}>{f.name}</span>
+                      {f.location && <span className={styles.timelineLoc}>{f.location}</span>}
+                    </div>
                     <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
                   </div>
                   {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
+                  {f.festival_date && <div className={styles.timelineFestDate}>Festival: {f.festival_date}</div>}
                 </div>
               </div>
-            ))}
+            )
+          })}
+        </div>
+      ))}
+      {ungrouped.length > 0 && (
+        <div className={styles.timelineGroup}>
+          <div className={styles.timelineMonthHead}>
+            <span className={styles.timelineMonthLabel}>No deadline</span>
+            <div className={styles.timelineMonthLine} />
           </div>
-        )}
-      </div>
+          {ungrouped.map((f, i) => (
+            <div key={i} className={styles.timelineItem}>
+              <div className={styles.timelineDotCol}>
+                <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
+              </div>
+              <div className={styles.timelineContent}>
+                <div className={styles.timelineTop}>
+                  <span className={styles.timelineName}>{f.name}</span>
+                  <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
+                </div>
+                {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -978,6 +1074,8 @@ function StrategyMessage({ text, onViewStrategy }) {
             { key: 'cards',    label: 'Cards',    icon: <LayoutGrid size={12} /> },
             { key: 'timeline', label: 'Timeline', icon: <Layers size={12} /> },
             { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} /> },
+            { key: 'globe',    label: 'Globe',    icon: <Globe2 size={12} /> },
+            { key: 'gallery',  label: 'Gallery',  icon: <Film size={12} /> },
           ].map(tab => (
             <button
               key={tab.key}
@@ -995,6 +1093,8 @@ function StrategyMessage({ text, onViewStrategy }) {
         {view === 'cards'    && <CardsView strategy={strategy} />}
         {view === 'timeline' && <TimelineView festivals={all} />}
         {view === 'calendar' && <CalendarView groups={deadlineGroups} all={all} />}
+        {view === 'globe'    && <GlobeView festivals={all} />}
+        {view === 'gallery'  && <GalleryView strategy={strategy} />}
       </div>
 
       {strategy.closing && (
