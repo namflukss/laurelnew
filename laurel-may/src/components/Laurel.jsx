@@ -225,7 +225,12 @@ function renderMarkdown(text) {
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
-    if (line.startsWith('## ')) {
+    if (line.startsWith('```')) {
+      // skip entire code fence block
+      i++
+      while (i < lines.length && !lines[i].startsWith('```')) i++
+      i++
+    } else if (line.startsWith('## ')) {
       out.push(<h2 key={i} className={styles.mdH2}>{renderInline(line.slice(3))}</h2>)
       i++
     } else if (line.startsWith('### ')) {
@@ -1083,15 +1088,7 @@ export default function Laurel() {
       const reply = data.content?.[0]?.text ?? 'Something went wrong.'
       history.current = [...history.current, { role: 'assistant', content: reply }]
 
-      const strategy = parseStrategy(reply)
-      if (strategy) {
-        const intro = getIntro(reply)
-        if (intro) setMessages(prev => [...prev, { role: 'agent', text: intro }])
-        setActiveStrategy(strategy)
-        setMode('strategy')
-      } else {
-        setMessages(prev => [...prev, { role: 'agent', text: reply }])
-      }
+      setMessages(prev => [...prev, { role: 'agent', text: reply }])
     } catch (err) {
       setMessages(prev => [...prev, { role: 'agent', text: `⚠️ ${err.message}` }])
       history.current = history.current.slice(0, -1)
