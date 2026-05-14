@@ -659,13 +659,17 @@ function GlobeView({ festivals }) {
     const mount = mountRef.current
     if (!mount) return
 
+    const W = mount.clientWidth  || mount.offsetWidth  || 480
+    const H = mount.clientHeight || mount.offsetHeight || 380
+
     const scene  = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(36, mount.clientWidth / mount.clientHeight, 0.1, 100)
+    const camera = new THREE.PerspectiveCamera(36, W / H, 0.1, 100)
     camera.position.set(0, 0.4, 3.6)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(0x000000, 0)
+    renderer.setSize(W, H, false)
     mount.appendChild(renderer.domElement)
 
     const gGroup = new THREE.Group()
@@ -829,7 +833,7 @@ function GlobeView({ festivals }) {
       {/* Main area: globe + list */}
       <div style={{ flex: 1, display: 'flex', position: 'relative', zIndex: 2, minHeight: 300 }}>
         {/* Globe canvas */}
-        <div ref={mountRef} style={{ flex: 1, cursor: 'grab', minHeight: 300 }} />
+        <div ref={mountRef} style={{ flex: 1, cursor: 'grab', minHeight: 380, height: 380 }} />
 
         {/* Festival list */}
         <div style={{ width: 170, padding: '16px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
