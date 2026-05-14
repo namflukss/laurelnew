@@ -491,9 +491,10 @@ function FestivalCardV2({ festival, tier }) {
           ) : null}
           <button
             onClick={() => setShowTips(p => !p)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, fontSize: 11, color: 'rgba(54,65,83,0.4)', fontFamily: "'Geist Mono', monospace", letterSpacing: '0.02em' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '3px 0', fontSize: 10, color: 'rgba(54,65,83,0.35)', fontFamily: "'Geist Mono', monospace", letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 4 }}
           >
-            {showTips ? '▲ hide tips' : `▼ ${festival.tips.length} tips`}
+            <span style={{ fontSize: 8, lineHeight: 1 }}>{showTips ? '▲' : '▼'}</span>
+            {showTips ? 'HIDE' : `${festival.tips.length} NOTES`}
           </button>
         </>
       )}
@@ -632,43 +633,50 @@ function StrategyMessage({ text, onViewStrategy }) {
   const total = all.length
   const deadlineGroups = groupByDeadline(all)
 
+  const tierCount = strategy.tiers.filter(t => t.festivals?.length > 0).length
+
   return (
     <div className={styles.strategyBlock}>
-      {intro && <p className={styles.strategyIntroLight}>{intro}</p>}
+      {intro && (
+        <p style={{ fontSize: 15, color: '#1f2937', lineHeight: 1.7, fontFamily: "'Inter', sans-serif", fontWeight: 400, padding: '0 2px', margin: 0 }}>
+          {intro}
+        </p>
+      )}
 
-      {/* Stats */}
-      <div className={styles.stratStats}>
-        <div className={styles.stratStat}>
-          <span className={styles.stratStatNum}>{total}</span>
-          <span className={styles.stratStatLabel}>Festivals</span>
+      {/* Stats row + view tabs */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          {[
+            { value: total, label: 'festivals' },
+            { value: tierCount, label: 'tiers' },
+            ...(deadlineGroups.length > 0 ? [{ value: deadlineGroups.length, label: 'deadlines' }] : []),
+          ].map((stat, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 700, color: '#1f2937', lineHeight: 1 }}>
+                {stat.value}
+              </span>
+              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: 'rgba(54,65,83,0.38)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {stat.label}
+              </span>
+            </div>
+          ))}
         </div>
-        <div className={styles.stratStat}>
-          <span className={styles.stratStatNum}>{strategy.tiers.filter(t => t.festivals?.length > 0).length}</span>
-          <span className={styles.stratStatLabel}>Tiers</span>
-        </div>
-        {deadlineGroups.length > 0 && (
-          <div className={styles.stratStat}>
-            <span className={styles.stratStatNum}>{deadlineGroups.length}</span>
-            <span className={styles.stratStatLabel}>Deadlines</span>
-          </div>
-        )}
-      </div>
 
-      {/* View tabs */}
-      <div className={styles.viewTabs}>
-        {[
-          { key: 'cards',    label: 'Cards',    icon: <LayoutGrid size={12} /> },
-          { key: 'timeline', label: 'Timeline', icon: <Layers size={12} /> },
-          { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} /> },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            className={`${styles.viewTab} ${view === tab.key ? styles.viewTabActive : ''}`}
-            onClick={() => setView(tab.key)}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
+        <div className={styles.viewTabs}>
+          {[
+            { key: 'cards',    label: 'Cards',    icon: <LayoutGrid size={12} /> },
+            { key: 'timeline', label: 'Timeline', icon: <Layers size={12} /> },
+            { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} /> },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              className={`${styles.viewTab} ${view === tab.key ? styles.viewTabActive : ''}`}
+              onClick={() => setView(tab.key)}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -678,7 +686,11 @@ function StrategyMessage({ text, onViewStrategy }) {
         {view === 'calendar' && <CalendarView groups={deadlineGroups} all={all} />}
       </div>
 
-      {strategy.closing && <p className={styles.strategyClosingLight}>{strategy.closing}</p>}
+      {strategy.closing && (
+        <p style={{ fontSize: 12, fontStyle: 'italic', color: 'rgba(54,65,83,0.42)', lineHeight: 1.65, padding: '0 2px', margin: 0, borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 10 }}>
+          {strategy.closing}
+        </p>
+      )}
 
       <motion.button className={styles.viewStrategyBtn} onClick={() => onViewStrategy(strategy)} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
         <LayoutGrid size={13} />
@@ -1195,12 +1207,33 @@ export default function Laurel() {
           )}
           <div className={styles.messages} style={!apiKey ? { display: 'none' } : {}}>
             {messages.length === 0 && !loading && (
-              <div className={styles.welcome}>
-                <h2 className={styles.welcomeTitle}>READY TO SUBMIT?</h2>
-                <div className={styles.starters}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, padding: '40px 24px 24px' }}>
+                <div style={{ marginBottom: 36, textAlign: 'center' }}>
+                  <LaurelMark size={30} />
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(54,65,83,0.28)', marginTop: 14, marginBottom: 10 }}>
+                    Film Festival Strategy
+                  </div>
+                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.2 }}>
+                    Tell me about your film.
+                  </h2>
+                </div>
+                <div style={{ width: '100%', maxWidth: 440 }}>
                   {STARTERS.map((s, i) => (
-                    <button key={i} className={styles.starterBtn} onClick={() => { setInput(s.template); setTimeout(() => textareaRef.current?.focus(), 50) }}>
-                      <span className={styles.starterLabel}>{s.label}</span>
+                    <button
+                      key={i}
+                      onClick={() => { setInput(s.template); setTimeout(() => textareaRef.current?.focus(), 50) }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', borderRadius: 10, width: '100%' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#FF5200', opacity: 0.55, width: 18, flexShrink: 0, textAlign: 'right' }}>
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: '#1f2937', lineHeight: 1.25 }}>{s.label}</div>
+                        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'rgba(54,65,83,0.36)', marginTop: 2 }}>{s.desc}</div>
+                      </div>
+                      <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: 'rgba(54,65,83,0.18)', flexShrink: 0 }}>→</span>
                     </button>
                   ))}
                 </div>
@@ -1210,13 +1243,13 @@ export default function Laurel() {
             {messages.map((m, i) => {
               if (m.role === 'user') return (
                 <div key={i} className={`${styles.msgRow} ${styles.user}`}>
-                  <div className={styles.msgMeta}>You</div>
-                  <div className={styles.msgBubble}>{m.text}</div>
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.12em', color: 'rgba(54,65,83,0.3)', textTransform: 'uppercase', marginBottom: 6, paddingRight: 4 }}>You</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#364153', lineHeight: 1.65, maxWidth: '80%', textAlign: 'right', whiteSpace: 'pre-wrap' }}>{m.text}</div>
                 </div>
               )
               return (
                 <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
-                  <div className={styles.msgMeta}>Laurel</div>
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.12em', color: '#FF5200', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 2, opacity: 0.7 }}>Laurel</div>
                   <StrategyMessage text={m.text} onViewStrategy={s => { setActiveStrategy(s); setMode('strategy') }} />
                 </div>
               )
