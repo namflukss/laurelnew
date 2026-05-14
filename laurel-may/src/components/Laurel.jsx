@@ -881,11 +881,76 @@ function FilePreviewCard({ file, onRemove }) {
   )
 }
 
+// ─── Inline Key Entry ─────────────────────────────────────────────────────────
+
+function InlineKeyEntry({ onReady }) {
+  const [key, setKey]     = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY
+    if (envKey?.startsWith('sk-')) onReady(envKey)
+  }, [onReady])
+
+  function submit() {
+    if (!key.trim().startsWith('sk-')) { setError('Key must start with sk-ant-…'); return }
+    onReady(key.trim())
+  }
+
+  return (
+    <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <LaurelMark size={28} />
+        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: '#C81400', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Laurel</span>
+      </div>
+      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: 'rgba(0,0,0,0.5)', lineHeight: 1.6, margin: 0 }}>
+        Enter your Anthropic API key to begin.<br />
+        Get one at <strong style={{ color: 'rgba(0,0,0,0.65)' }}>console.anthropic.com → API Keys</strong>
+      </p>
+      <input
+        type="password"
+        placeholder="sk-ant-api03-…"
+        value={key}
+        autoFocus
+        onChange={e => { setKey(e.target.value); setError('') }}
+        onKeyDown={e => e.key === 'Enter' && submit()}
+        style={{
+          fontFamily: "'Geist Mono', monospace", fontSize: 13,
+          padding: '12px 16px', borderRadius: 12,
+          border: error ? '1.5px solid #C81400' : '1.5px solid #FF9933',
+          background: '#fff', color: '#364153', outline: 'none',
+          transition: 'border-color 0.15s',
+        }}
+        onFocus={e => { if (!error) e.target.style.borderColor = '#FF5200' }}
+        onBlur={e => { if (!error) e.target.style.borderColor = '#FF9933' }}
+      />
+      {error && <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: '#C81400', margin: 0 }}>{error}</p>}
+      <button
+        onClick={submit}
+        style={{
+          fontFamily: "'Geist Mono', monospace", fontSize: 13, fontWeight: 600,
+          letterSpacing: '0.06em', padding: '12px 0',
+          background: '#FF5200', color: '#fff', border: 'none',
+          borderRadius: 12, cursor: 'pointer', transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.target.style.background = '#C81400'}
+        onMouseLeave={e => e.target.style.background = '#FF5200'}
+      >
+        BEGIN SESSION →
+      </button>
+      <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'rgba(0,0,0,0.28)', margin: 0, lineHeight: 1.6 }}>
+        Your key is sent only to Anthropic's API — never logged or stored by us.
+      </p>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Laurel() {
-  const [mode,           setMode]           = useState(null)
-  const [apiKey,         setApiKey]         = useState(null)
+  const savedKey = localStorage.getItem('laurel_api_key')
+  const [mode,           setMode]           = useState('chat')
+  const [apiKey,         setApiKey]         = useState(savedKey ?? null)
   const [activeStrategy, setActiveStrategy] = useState(null)
   const [messages,       setMessages]       = useState([])
   const [input,          setInput]          = useState('')
@@ -1007,16 +1072,25 @@ export default function Laurel() {
     }
   }
 
-  if (mode === null)   return <Landing onChat={() => setMode('chat')} onExplore={() => setMode('explore')} />
-  if (mode === 'explore') return <ExploreFestivals onBack={() => setMode(null)} />
+  if (mode === 'explore') return <ExploreFestivals onBack={() => setMode('chat')} />
   if (mode === 'strategy' && activeStrategy) return <StrategyDashboard strategy={activeStrategy} onBack={() => setMode('chat')} />
-  if (!apiKey) return <KeyScreen onReady={setApiKey} onBack={() => setMode(null)} />
+
+  const RECENT_CONVS = messages.length > 0
+    ? [{ id: 'current', text: messages[0]?.text?.slice(0, 38) + '…' }]
+    : []
+
+  const PAST_CONVS = [
+    'Documentary short, Sundance strategy',
+    'Animated feature — Annecy & beyond',
+    'Micro-budget drama Oscar path',
+    'First feature narrative, SXSW target',
+  ]
 
   return (
     <div className={styles.root}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={() => setMode(null)}>← Back</button>
+          <div><LaurelMark size={26} /></div>
           <div className={styles.headerDivider} />
           <div>
             <div className={styles.headerTitle}>Laurel</div>
@@ -1024,190 +1098,167 @@ export default function Laurel() {
           </div>
         </div>
         <div className={styles.headerRight}>
+          <button className={styles.backBtn} onClick={() => setMode('explore')}>Explore Festivals</button>
           <div className={styles.statusDot} />
-          <span className={styles.statusLabel}>Online</span>
+          <span className={styles.statusLabel}>Ready</span>
         </div>
       </header>
 
-      <div className={styles.messages}>
-        {messages.length === 0 && !loading && (
-          <div className={styles.welcome}>
-            <div className={styles.welcomeMark}><LaurelMark size={48} /></div>
-            <h2 className={styles.welcomeTitle}>Tell me about your film.</h2>
-            <p className={styles.welcomeBody}>Choose a strategy template or describe your film directly.</p>
-            <div className={styles.starters}>
-              {STARTERS.map((s, i) => (
-                <button key={i} className={styles.starterBtn} onClick={() => { setInput(s.template); setTimeout(() => textareaRef.current?.focus(), 50) }}>
-                  <span className={styles.starterLabel}>{s.label}</span>
-                  <span className={styles.starterDesc}>{s.desc}</span>
-                </button>
-              ))}
+      <div className={styles.chatLayout}>
+        {/* ── Sidebar ── */}
+        <aside className={styles.chatSidebar}>
+          <div className={styles.sidebarTop}>
+            <button className={styles.newChatBtn} onClick={() => { setMessages([]); setInput('') }}>
+              <Plus size={18} />
+              New chat
+            </button>
+          </div>
+
+          <div className={styles.sidebarConvs}>
+            <div className={styles.convSectionHead}>
+              <span className={styles.convSectionLabel}>Your conversations</span>
+              <button className={styles.convClearBtn} onClick={() => setMessages([])}>Clear All</button>
+            </div>
+
+            {RECENT_CONVS.map(c => (
+              <div key={c.id} className={`${styles.convItem} ${styles.convItemActive}`}>
+                <Layers size={16} className={styles.convItemIcon} style={{ color: '#FF5200', opacity: 1 }} />
+                <span className={styles.convItemText}>{c.text}</span>
+              </div>
+            ))}
+
+            {PAST_CONVS.map((t, i) => (
+              <div key={i} className={styles.convItem}>
+                <Layers size={16} className={styles.convItemIcon} style={{ color: '#364153' }} />
+                <span className={styles.convItemText}>{t}</span>
+              </div>
+            ))}
+
+            <p className={styles.convDividerLabel}>Last 7 Days</p>
+            <div className={styles.convItem}>
+              <Layers size={16} className={styles.convItemIcon} style={{ color: '#364153' }} />
+              <span className={styles.convItemText}>Short film, European circuit</span>
+            </div>
+            <div className={styles.convItem}>
+              <Layers size={16} className={styles.convItemIcon} style={{ color: '#364153' }} />
+              <span className={styles.convItemText}>Feature doc — Hot Docs path</span>
             </div>
           </div>
-        )}
 
-        {messages.map((m, i) => {
-          if (m.role === 'user') return (
-            <div key={i} className={`${styles.msgRow} ${styles.user}`}>
-              <div className={styles.msgMeta}>You</div>
-              <div className={styles.msgBubble}>{m.text}</div>
-            </div>
-          )
-          return (
-            <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
-              <div className={styles.msgMeta}>Laurel</div>
-              <StrategyMessage text={m.text} onViewStrategy={s => { setActiveStrategy(s); setMode('strategy') }} />
-            </div>
-          )
-        })}
-
-        {loading && (
-          <div className={styles.typingRow}>
-            <div className={styles.typingBubble}>
-              {[0, 1, 2].map(i => <div key={i} className={styles.typingDot} style={{ animationDelay: `${i * 0.2}s` }} />)}
-            </div>
+          <div className={styles.sidebarFooter}>
+            <button className={styles.sidebarFooterBtn} onClick={() => { localStorage.removeItem('laurel_api_key'); setApiKey(null) }}>
+              <Wallet size={16} style={{ color: '#364153', opacity: 0.6 }} />
+              <span className={styles.sidebarFooterLabel}>Settings</span>
+            </button>
+            <button className={styles.sidebarFooterBtn}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#FF5200', flexShrink: 0 }} />
+              <span className={styles.sidebarFooterLabel}>Your Account</span>
+            </button>
           </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+        </aside>
 
-      {/* ── New Claude-style Chat Input ── */}
-      <div
-        style={{ padding: '0 16px 20px', flexShrink: 0, position: 'relative' }}
-        onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
-        onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
-        onDrop={e => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files) handleFiles(e.dataTransfer.files) }}
-      >
-        {/* Command Palette */}
-        {showCommands && (
-          <CommandPalette query={input} active={activeCommand} onSelect={selectCommand} onClose={() => setShowCommands(false)} paletteRef={paletteRef} />
-        )}
-
-        {/* Input container */}
-        <div style={{
-          background: '#1A0D05',
-          border: `1px solid ${inputFocused ? 'rgba(255,82,0,0.4)' : 'rgba(255,255,255,0.09)'}`,
-          borderRadius: 20,
-          boxShadow: inputFocused
-            ? '0 0 0 3px rgba(255,82,0,0.1), 0 8px 32px rgba(0,0,0,0.5)'
-            : '0 4px 20px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3)',
-          transition: 'border-color 0.2s, box-shadow 0.2s',
-          overflow: 'hidden',
-          cursor: 'text',
-        }}
-          onClick={() => textareaRef.current?.focus()}
-        >
-          {/* File previews */}
-          {attachedFiles.length > 0 && (
-            <div style={{ display: 'flex', gap: 10, padding: '12px 12px 0', overflowX: 'auto' }}>
-              {attachedFiles.map(f => (
-                <FilePreviewCard key={f.id} file={f} onRemove={removeFile} />
-              ))}
+        {/* ── Main chat area ── */}
+        <div className={styles.chatMain}>
+          {!apiKey && (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+              <InlineKeyEntry onReady={k => { localStorage.setItem('laurel_api_key', k); setApiKey(k) }} />
             </div>
           )}
+          <div className={styles.messages} style={!apiKey ? { display: 'none' } : {}}>
+            {messages.length === 0 && !loading && (
+              <div className={styles.welcome}>
+                <h2 className={styles.welcomeTitle}>READY TO SUBMIT?</h2>
+                <div className={styles.starters}>
+                  {STARTERS.map((s, i) => (
+                    <button key={i} className={styles.starterBtn} onClick={() => { setInput(s.template); setTimeout(() => textareaRef.current?.focus(), 50) }}>
+                      <span className={styles.starterLabel}>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {/* Textarea */}
-          <div style={{ padding: attachedFiles.length > 0 ? '10px 14px 0' : '14px 14px 0' }}>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              placeholder="Tell me about your film…"
-              rows={1}
-              style={{
-                width: '100%', background: 'transparent', border: 'none',
-                outline: 'none', resize: 'none', overflow: 'hidden',
-                color: '#FFFFFF', fontSize: 15, lineHeight: 1.65,
-                fontFamily: "'Inter', sans-serif", fontWeight: 400,
-                display: 'block',
-              }}
-            />
+            {messages.map((m, i) => {
+              if (m.role === 'user') return (
+                <div key={i} className={`${styles.msgRow} ${styles.user}`}>
+                  <div className={styles.msgMeta}>You</div>
+                  <div className={styles.msgBubble}>{m.text}</div>
+                </div>
+              )
+              return (
+                <div key={i} className={`${styles.msgRow} ${styles.agent}`}>
+                  <div className={styles.msgMeta}>Laurel</div>
+                  <StrategyMessage text={m.text} onViewStrategy={s => { setActiveStrategy(s); setMode('strategy') }} />
+                </div>
+              )
+            })}
+
+            {loading && (
+              <div className={styles.typingRow}>
+                <div className={styles.typingBubble}>
+                  <span className={styles.typingText}>Thinking<span className={styles.typingCursor}>_</span></span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Toolbar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '6px 8px 8px',
-          }}>
-            {/* Left tools */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <ToolBtn title="Attach file" onClick={() => fileInputRef.current?.click()}>
-                <Plus size={17} />
-              </ToolBtn>
-              <ToolBtn
-                title="Commands (/)"
-                onClick={() => { setInput('/'); setShowCommands(true); textareaRef.current?.focus() }}
-                active={showCommands}
-              >
-                <Command size={15} />
-              </ToolBtn>
-            </div>
+          {/* ── Input ── */}
+          {apiKey && <div
+            className={styles.chatInputArea}
+            onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
+            onDragLeave={e => { e.preventDefault(); setIsDragging(false) }}
+            onDrop={e => { e.preventDefault(); setIsDragging(false); if (e.dataTransfer.files) handleFiles(e.dataTransfer.files) }}
+          >
+            {showCommands && (
+              <CommandPalette query={input} active={activeCommand} onSelect={selectCommand} onClose={() => setShowCommands(false)} paletteRef={paletteRef} />
+            )}
 
-            {/* Right tools */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{
-                fontFamily: "'Geist Mono', monospace", fontSize: 10,
-                color: 'rgba(255,255,255,0.22)', letterSpacing: '0.05em',
-                userSelect: 'none',
-              }}>
-                claude-haiku-4
-              </span>
+            <div className={styles.chatInputBox} onClick={() => textareaRef.current?.focus()}>
+              {attachedFiles.length > 0 && (
+                <div style={{ display: 'flex', gap: 10, padding: '12px 24px 0', overflowX: 'auto' }}>
+                  {attachedFiles.map(f => <FilePreviewCard key={f.id} file={f} onRemove={removeFile} />)}
+                </div>
+              )}
+              <textarea
+                ref={textareaRef}
+                className={styles.chatTextarea}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setInputFocused(false)}
+                placeholder="⊕  Tell me about your film…"
+                rows={1}
+              />
               <button
+                className={styles.chatSendBtn}
                 onClick={() => send(input)}
                 disabled={loading || !input.trim()}
-                style={{
-                  width: 32, height: 32, borderRadius: 10, border: 'none',
-                  background: input.trim() && !loading ? '#FF5200' : 'rgba(255,82,0,0.2)',
-                  color: '#fff', cursor: input.trim() && !loading ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 0.15s, transform 0.1s',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={e => { if (input.trim() && !loading) e.currentTarget.style.background = '#C81400' }}
-                onMouseLeave={e => { if (input.trim() && !loading) e.currentTarget.style.background = '#FF5200' }}
-                onMouseDown={e => { if (input.trim() && !loading) e.currentTarget.style.transform = 'scale(0.93)' }}
-                onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)' }}
                 aria-label="Send"
               >
-                <ArrowUp size={16} strokeWidth={2.5} />
+                <ArrowUp size={18} strokeWidth={2.5} />
               </button>
             </div>
-          </div>
+
+            {isDragging && (
+              <div style={{
+                position: 'absolute', inset: '16px 32px 24px',
+                background: 'rgba(255,82,0,0.06)', border: '2px dashed #FF5200',
+                borderRadius: 22, zIndex: 50, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+              }}>
+                <Plus size={28} color="#FF5200" style={{ marginBottom: 8 }} />
+                <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: '#FF5200', letterSpacing: '0.1em' }}>DROP TO ATTACH</p>
+              </div>
+            )}
+
+            <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }}
+              onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = '' }} />
+
+            <p className={styles.chatHint}>Enter to send · Shift+Enter for new line</p>
+          </div>}
         </div>
-
-        {/* Drag overlay */}
-        {isDragging && (
-          <div style={{
-            position: 'absolute', inset: '0 16px 20px',
-            background: 'rgba(255,82,0,0.07)',
-            border: '2px dashed #FF5200',
-            borderRadius: 20, zIndex: 50,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            backdropFilter: 'blur(6px)', pointerEvents: 'none',
-          }}>
-            <Plus size={28} color="#FF5200" style={{ marginBottom: 8, opacity: 0.8 }} />
-            <p style={{ fontFamily: "'Geist Mono', monospace", fontSize: 11, color: '#FF5200', letterSpacing: '0.1em' }}>
-              DROP TO ATTACH
-            </p>
-          </div>
-        )}
-
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef} type="file" multiple style={{ display: 'none' }}
-          onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = '' }}
-        />
-
-        <p style={{
-          fontFamily: "'Geist Mono', monospace", fontSize: 10,
-          color: 'rgba(255,255,255,0.18)', letterSpacing: '0.06em',
-          textAlign: 'center', marginTop: 10,
-        }}>
-          Enter to send · Shift+Enter for new line · / for commands
-        </p>
       </div>
     </div>
   )
