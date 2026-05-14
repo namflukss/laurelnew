@@ -361,242 +361,90 @@ const TIER_META = {
 }
 
 function StrategyDashboard({ strategy, onBack }) {
-  const allFestivals = flatFestivals(strategy)
-  const [selected, setSelected] = useState(allFestivals[0] || null)
-
-  const tc       = selected ? (TIER_COLORS[selected.tier] || TIER_COLORS.C) : TIER_COLORS.A
-  const prestige = selected ? (TIER_PRESTIGE[selected.tier] || 4) : 4
-  const selIdx   = allFestivals.findIndex(f => f.name === selected?.name)
+  const allFestivals   = flatFestivals(strategy)
+  const deadlineGroups = groupByDeadline(allFestivals)
+  const [view, setView] = useState('cards')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0A0503', overflow: 'hidden', fontFamily: "'Geist Mono', monospace" }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#f0f1f2', overflow: 'hidden' }}>
 
-      {/* ── Top bar ── */}
+      {/* ── Header ── */}
       <div style={{
-        height: 48, minHeight: 48, background: '#111',
-        borderBottom: '1px solid #1e1e1e',
+        background: 'rgba(10,5,3,0.92)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 16px', flexShrink: 0,
+        padding: '0 24px', height: 52, flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <button onClick={onBack} style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#666',
-            letterSpacing: '0.12em', padding: 0,
+            fontFamily: "'Geist Mono', monospace", fontSize: 10.5, color: 'rgba(255,255,255,0.45)',
+            letterSpacing: '0.06em', padding: 0, display: 'flex', alignItems: 'center', gap: 6,
           }}>← Chat</button>
-          <div style={{ width: 1, height: 16, background: '#2a2a2a' }} />
+          <div style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.1)' }} />
           <div>
-            <div style={{ fontSize: 11, color: '#fff', letterSpacing: '0.06em' }}>Your Strategy</div>
-            <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.1em', marginTop: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#FF5200', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>
+              Your Strategy
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', marginTop: 1, fontFamily: "'Geist Mono', monospace", letterSpacing: '0.06em' }}>
               {allFestivals.length} festivals · {strategy.tiers.filter(t => t.festivals?.length > 0).length} tiers
             </div>
           </div>
         </div>
         {strategy.closing && (
-          <div style={{ fontSize: 9, color: '#3a3a3a', letterSpacing: '0.06em', maxWidth: '40%', textAlign: 'right' }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', fontFamily: "'Inter', sans-serif", maxWidth: '45%', textAlign: 'right', lineHeight: 1.5 }}>
             {strategy.closing}
           </div>
         )}
       </div>
 
-      {/* ── Body ── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      {/* ── Content ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px 40px' }}>
 
-        {/* Sidebar */}
-        <div style={{
-          width: '21%', minWidth: 168, background: '#111',
-          borderRight: '1px solid #1e1e1e', overflowY: 'auto', padding: '12px 0',
-        }}>
-          <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.14em', textTransform: 'uppercase', padding: '0 12px 10px' }}>
-            Festival List
-          </div>
-          {strategy.tiers.filter(t => t.festivals?.length > 0).map(tier => {
-            const tColor = TIER_COLORS[tier.tier] || TIER_COLORS.C
-            return (
-              <div key={tier.tier}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px 6px', borderTop: '1px solid #1a1a1a' }}>
-                  <div style={{
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: tColor + '22', border: `1px solid ${tColor}55`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 8, color: tColor, flexShrink: 0,
-                  }}>{tier.tier}</div>
-                  <span style={{ fontSize: 9, color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    {tier.label}
-                  </span>
-                </div>
-                {tier.festivals.map((f, i) => {
-                  const isActive = selected?.name === f.name
-                  return (
-                    <div key={i}
-                      onClick={() => setSelected({ ...f, tier: tier.tier, tierLabel: tier.label })}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '7px 12px', cursor: 'pointer',
-                        borderLeft: isActive ? `2px solid ${tColor}` : '2px solid transparent',
-                        background: isActive ? tColor + '12' : 'transparent',
-                        transition: 'background 0.15s',
-                      }}>
-                      <div style={{
-                        width: 44, height: 33, borderRadius: 4,
-                        background: tColor + '18', border: `1px solid ${tColor}22`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        flexShrink: 0, overflow: 'hidden', position: 'relative',
-                      }}>
-                        <div style={{
-                          position: 'absolute', left: 0, top: 0, bottom: 0, width: 5,
-                          background: '#00000040', display: 'flex', flexDirection: 'column',
-                          justifyContent: 'space-evenly', padding: '2px 1px',
-                        }}>
-                          {[0,1,2].map(j => <div key={j} style={{ height: 4, background: '#ffffff10', borderRadius: 1 }} />)}
-                        </div>
-                        <span style={{ fontSize: 8, color: isActive ? tColor : '#555', letterSpacing: '0.04em' }}>
-                          {f.name.slice(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: 10, color: isActive ? '#fff' : '#777', lineHeight: 1.3, letterSpacing: '0.02em' }}>
-                        {f.name}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Viewport */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 7vw', position: 'relative', overflow: 'hidden' }}>
-          {selected && (
-            <div style={{
-              position: 'absolute', right: '4vw', bottom: '8vh',
-              fontFamily: "'Barlow Condensed', sans-serif",
-              fontSize: 'clamp(80px, 13vw, 160px)',
-              color: '#131313', lineHeight: 1, userSelect: 'none', pointerEvents: 'none',
-            }}>
-              {String(selIdx + 1).padStart(2, '0')}
+        {/* Stats + view tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+          <div className={styles.stratStats}>
+            <div className={styles.stratStat}>
+              <span className={styles.stratStatNum}>{allFestivals.length}</span>
+              <span className={styles.stratStatLabel}>Festivals</span>
             </div>
-          )}
+            <div className={styles.stratStat}>
+              <span className={styles.stratStatNum}>{strategy.tiers.filter(t => t.festivals?.length > 0).length}</span>
+              <span className={styles.stratStatLabel}>Tiers</span>
+            </div>
+            {deadlineGroups.length > 0 && (
+              <div className={styles.stratStat}>
+                <span className={styles.stratStatNum}>{deadlineGroups.length}</span>
+                <span className={styles.stratStatLabel}>Deadlines</span>
+              </div>
+            )}
+          </div>
 
-          {selected ? (
-            <motion.div key={selected.name} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-              <div style={{ fontSize: 10, color: '#444', letterSpacing: '0.18em', marginBottom: '2.5vh' }}>
-                {String(selIdx + 1).padStart(2, '0')} / {String(allFestivals.length).padStart(2, '0')}
-              </div>
-              <h2 style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
-                fontSize: 'clamp(34px, 4.5vw, 64px)',
-                color: '#fff', lineHeight: 1.1, margin: '0 0 2.5vh',
-                fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase',
-              }}>
-                {selected.name}
-              </h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 10, color: '#555', letterSpacing: '0.1em', marginBottom: '1.8vh' }}>
-                {selected.location && <span>{selected.location}</span>}
-                <span style={{ color: '#2a2a2a' }}>·</span>
-                <span style={{ color: tc }}>Tier {selected.tier}</span>
-              </div>
-              <div style={{ width: 48, height: 1, background: tc, opacity: 0.6, marginBottom: '2.2vh' }} />
-              <div style={{ fontSize: 9, color: '#555', letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '2.2vh' }}>
-                {selected.tierLabel}
-              </div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: '#888', lineHeight: 1.8, maxWidth: 460, margin: '0 0 2.5vh' }}>
-                {selected.reason}
-              </p>
-              {selected.submit_by && (
-                <div style={{
-                  display: 'inline-block', border: `1px solid ${tc}44`,
-                  borderRadius: 20, padding: '4px 14px',
-                  fontSize: 9, color: tc, letterSpacing: '0.1em',
-                }}>
-                  Submit by {selected.submit_by}
-                </div>
-              )}
-            </motion.div>
-          ) : (
-            <div style={{ fontSize: 11, color: '#333' }}>Select a festival</div>
-          )}
+          <div className={styles.viewTabs}>
+            {[
+              { key: 'cards',    label: 'Cards',    icon: <LayoutGrid size={12} /> },
+              { key: 'timeline', label: 'Timeline', icon: <Layers size={12} /> },
+              { key: 'calendar', label: 'Calendar', icon: <CalendarDays size={12} /> },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                className={`${styles.viewTab} ${view === tab.key ? styles.viewTabActive : ''}`}
+                onClick={() => setView(tab.key)}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Detail panel */}
-        <div style={{
-          width: '25%', minWidth: 200, background: '#131313',
-          borderLeft: '1px solid #1e1e1e', padding: 12,
-          display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto',
-        }}>
-          {selected ? (
-            <>
-              <DetailCard label="Festival Details">
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6, marginBottom: 10 }}>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#fff', lineHeight: 1.3, flex: 1 }}>
-                    {selected.name}
-                  </div>
-                  <div style={{
-                    background: tc + '22', border: `1px solid ${tc}44`,
-                    borderRadius: 20, padding: '2px 8px', flexShrink: 0,
-                    fontSize: 8, color: tc, letterSpacing: '0.06em', marginTop: 2,
-                  }}>
-                    Tier {selected.tier}
-                  </div>
-                </div>
-                {selected.location && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 10, color: '#555' }}>Location</span>
-                    <span style={{ fontSize: 10, color: '#888', textAlign: 'right', maxWidth: '55%' }}>{selected.location}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: 10, color: '#555' }}>Category</span>
-                  <span style={{ fontSize: 10, color: '#666', textAlign: 'right', maxWidth: '55%' }}>{selected.tierLabel}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 10, color: '#555' }}>Priority</span>
-                  <span style={{ fontSize: 10, color: tc }}>{prestige} / 10</span>
-                </div>
-                <div style={{ background: '#0f0f0f', borderRadius: 3, height: 4, marginBottom: 12, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', background: tc, borderRadius: 3, width: `${prestige * 10}%`, transition: 'width 0.4s ease' }} />
-                </div>
-                <div style={{ background: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: 5, padding: '8px 10px' }}>
-                  <div style={{ fontSize: 9, color: tc, marginBottom: 5, letterSpacing: '0.1em' }}>WHY THIS FESTIVAL</div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: '#777', lineHeight: 1.6 }}>{selected.reason}</div>
-                </div>
-              </DetailCard>
-
-              {(selected.submit_by || selected.festival_date) && (
-                <DetailCard label="Key Deadlines">
-                  {selected.submit_by && (
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF5200', flexShrink: 0, marginRight: 8 }} />
-                      <span style={{ fontSize: 10, color: '#999', flex: 1 }}>Submit by</span>
-                      <span style={{ fontSize: 10, color: '#666' }}>{selected.submit_by}</span>
-                    </div>
-                  )}
-                  {selected.festival_date && (
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                      <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FAC703', flexShrink: 0, marginRight: 8 }} />
-                      <span style={{ fontSize: 10, color: '#999', flex: 1 }}>Festival date</span>
-                      <span style={{ fontSize: 10, color: '#666' }}>{selected.festival_date}</span>
-                    </div>
-                  )}
-                </DetailCard>
-              )}
-
-              {selected.tips?.length > 0 && (
-                <DetailCard label="Strategy Tips">
-                  {selected.tips.map((tip, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: i < selected.tips.length - 1 ? 10 : 0 }}>
-                      <div style={{ width: 1, background: tc + '55', flexShrink: 0, marginTop: 4, alignSelf: 'stretch' }} />
-                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: '#777', lineHeight: 1.6 }}>{tip}</span>
-                    </div>
-                  ))}
-                </DetailCard>
-              )}
-            </>
-          ) : (
-            <div style={{ fontSize: 10, color: '#333', padding: 4 }}>Select a festival to see details</div>
-          )}
-        </div>
-
+        {/* View content */}
+        <AnimatePresence mode="wait">
+          <motion.div key={view} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+            {view === 'cards'    && <CardsView strategy={strategy} />}
+            {view === 'timeline' && <TimelineView festivals={allFestivals} />}
+            {view === 'calendar' && <CalendarView groups={deadlineGroups} all={allFestivals} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   )
