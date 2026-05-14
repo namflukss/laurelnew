@@ -205,8 +205,9 @@ const SKILLS = [
   },
 ]
 
-const API_URL = 'https://api.anthropic.com/v1/messages'
-const MODEL   = 'claude-haiku-4-5-20251001'
+const API_URL     = 'https://api.anthropic.com/v1/messages'
+const MODEL       = 'claude-haiku-4-5-20251001'
+const MAX_TOKENS  = 4096
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
 
@@ -443,13 +444,11 @@ function StrategyDashboard({ strategy, onBack }) {
         </div>
 
         {/* View content */}
-        <AnimatePresence mode="wait">
-          <motion.div key={view} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
-            {view === 'cards'    && <CardsView strategy={strategy} />}
-            {view === 'timeline' && <TimelineView festivals={allFestivals} />}
-            {view === 'calendar' && <CalendarView groups={deadlineGroups} all={allFestivals} />}
-          </motion.div>
-        </AnimatePresence>
+        <div>
+          {view === 'cards'    && <CardsView strategy={strategy} />}
+          {view === 'timeline' && <TimelineView festivals={allFestivals} />}
+          {view === 'calendar' && <CalendarView groups={deadlineGroups} all={allFestivals} />}
+        </div>
       </div>
     </div>
   )
@@ -620,7 +619,14 @@ function StrategyMessage({ text, onViewStrategy }) {
   const intro    = getIntro(text)
   const [view, setView] = useState('cards')
 
-  if (!strategy) return <div className={`${styles.msgBubble} ${styles.agentBubble}`}>{renderMarkdown(text)}</div>
+  if (!strategy) {
+    const plain = text.replace(/```[\s\S]*?```/g, '').trim()
+    return (
+      <div className={`${styles.msgBubble} ${styles.agentBubble}`}>
+        {plain ? renderMarkdown(plain) : renderMarkdown(text)}
+      </div>
+    )
+  }
 
   const all   = flatFestivals(strategy)
   const total = all.length
@@ -666,13 +672,11 @@ function StrategyMessage({ text, onViewStrategy }) {
       </div>
 
       {/* Content */}
-      <AnimatePresence mode="wait">
-        <motion.div key={view} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
-          {view === 'cards'    && <CardsView strategy={strategy} />}
-          {view === 'timeline' && <TimelineView festivals={all} />}
-          {view === 'calendar' && <CalendarView groups={deadlineGroups} all={all} />}
-        </motion.div>
-      </AnimatePresence>
+      <div>
+        {view === 'cards'    && <CardsView strategy={strategy} />}
+        {view === 'timeline' && <TimelineView festivals={all} />}
+        {view === 'calendar' && <CalendarView groups={deadlineGroups} all={all} />}
+      </div>
 
       {strategy.closing && <p className={styles.strategyClosingLight}>{strategy.closing}</p>}
 
@@ -1077,7 +1081,7 @@ export default function Laurel() {
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: MODEL, max_tokens: 1500, system: SYSTEM_PROMPT, messages: history.current }),
+        body: JSON.stringify({ model: MODEL, max_tokens: MAX_TOKENS, system: SYSTEM_PROMPT, messages: history.current }),
       })
       const data = await res.json()
       if (!res.ok) {
