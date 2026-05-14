@@ -928,6 +928,8 @@ function GalleryView({ strategy }) {
   )
 }
 
+const TIER_DOT_COLOR = { A: '#FF5200', B: '#FAC703', C: '#9ca3af' }
+
 function TimelineView({ festivals }) {
   const sorted    = [...festivals].filter(f => f.submit_by).sort((a, b) => {
     const pa = parseMonthYear(a.submit_by)
@@ -937,60 +939,131 @@ function TimelineView({ festivals }) {
   const ungrouped = festivals.filter(f => !f.submit_by)
   const groups    = groupByDeadline(sorted)
 
+  const allGroups = [
+    ...groups,
+    ...(ungrouped.length > 0 ? [{ key: '__none__', month: null, year: null, festivals: ungrouped }] : [])
+  ]
+
+  if (allGroups.length === 0) {
+    return (
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #ede8e1', padding: '40px 24px', textAlign: 'center' }}>
+        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b8a898' }}>No deadline data available</div>
+      </div>
+    )
+  }
+
   return (
-    <div className={styles.timelineView}>
-      {groups.map((group, gi) => (
-        <div key={group.key} className={styles.timelineGroup}>
-          <div className={styles.timelineMonthHead}>
-            <span className={styles.timelineMonthLabel}>{MONTH_FULL[group.month]} {group.year}</span>
-            <div className={styles.timelineMonthLine} />
-          </div>
-          {group.festivals.map((f, fi) => {
-            const isLast = fi === group.festivals.length - 1 && gi === groups.length - 1 && ungrouped.length === 0
-            return (
-              <div key={fi} className={styles.timelineItem}>
-                <div className={styles.timelineDotCol}>
-                  <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
-                  {!isLast && <div className={styles.timelineConnector} />}
-                </div>
-                <div className={styles.timelineContent}>
-                  <div className={styles.timelineTop}>
-                    <div>
-                      <span className={styles.timelineName}>{f.name}</span>
-                      {f.location && <span className={styles.timelineLoc}>{f.location}</span>}
-                    </div>
-                    <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
+    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #ede8e1', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+      {/* Header */}
+      <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #ede8e1' }}>
+        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 700, color: '#1a1008', letterSpacing: '-0.01em' }}>
+          Festival Timeline
+        </div>
+        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b8a898', marginTop: 3, letterSpacing: '0.04em' }}>
+          Submission deadlines · {festivals.length} festivals
+        </div>
+      </div>
+
+      {/* Scrollable horizontal roadmap */}
+      <div style={{ padding: '28px 24px 24px', overflowX: 'auto' }}>
+        <div style={{ position: 'relative', minWidth: allGroups.length * 192 }}>
+
+          {/* Horizontal line */}
+          <div style={{ position: 'absolute', left: 0, right: 0, top: 7, height: 1, background: '#ede8e1' }} />
+
+          <div style={{ display: 'flex' }}>
+            {allGroups.map((group, gi) => {
+              const dotColor = group.month ? '#FF5200' : '#9ca3af'
+              const monthLabel = group.month ? `${MONTH_FULL[group.month]} ${group.year}` : 'No deadline'
+              const isActive = group.month !== null
+
+              return (
+                <motion.div
+                  key={group.key}
+                  style={{ flex: '0 0 192px', paddingTop: 32, paddingRight: 12, position: 'relative' }}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: gi * 0.08 }}
+                >
+                  {/* Timeline dot */}
+                  <motion.div
+                    whileHover={{ scale: 1.25 }}
+                    style={{
+                      position: 'absolute', left: '50%', top: 0,
+                      transform: 'translateX(-50%)',
+                      width: 15, height: 15, borderRadius: '50%',
+                      background: isActive ? dotColor : '#e5e0db',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'default', zIndex: 1,
+                    }}
+                  >
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />
+                  </motion.div>
+
+                  {/* Month badge */}
+                  <div style={{ textAlign: 'center', marginBottom: 14 }}>
+                    <span style={{
+                      display: 'inline-block',
+                      fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.07em', textTransform: 'uppercase',
+                      padding: '3px 9px', borderRadius: 99,
+                      background: isActive ? 'rgba(255,82,0,0.09)' : 'rgba(0,0,0,0.05)',
+                      color: isActive ? '#FF5200' : '#9ca3af',
+                      border: `1px solid ${isActive ? 'rgba(255,82,0,0.2)' : 'rgba(0,0,0,0.08)'}`,
+                    }}>
+                      {monthLabel}
+                    </span>
                   </div>
-                  {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
-                  {f.festival_date && <div className={styles.timelineFestDate}>Festival: {f.festival_date}</div>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      ))}
-      {ungrouped.length > 0 && (
-        <div className={styles.timelineGroup}>
-          <div className={styles.timelineMonthHead}>
-            <span className={styles.timelineMonthLabel}>No deadline</span>
-            <div className={styles.timelineMonthLine} />
+
+                  {/* Festival cards */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {group.festivals.map((f, fi) => {
+                      const tierColor = TIER_DOT_COLOR[f.tier] || '#9ca3af'
+                      return (
+                        <motion.div
+                          key={fi}
+                          style={{
+                            background: '#faf9f7', borderRadius: 8,
+                            padding: '9px 11px',
+                            border: '1px solid #ede8e1',
+                            borderLeft: `2px solid ${tierColor}`,
+                          }}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.25, delay: gi * 0.08 + fi * 0.04 }}
+                        >
+                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: '#1a1008', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.1 }}>
+                            {f.name}
+                          </div>
+                          {f.location && (
+                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#b8a898', marginTop: 3 }}>
+                              {f.location}
+                            </div>
+                          )}
+                          <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                            <span style={{
+                              fontFamily: "'Geist Mono', monospace", fontSize: 8, fontWeight: 600,
+                              letterSpacing: '0.08em', color: tierColor,
+                              background: `${tierColor}15`, padding: '2px 6px', borderRadius: 4,
+                            }}>
+                              TIER {f.tier}
+                            </span>
+                            {f.festival_date && (
+                              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: '#c4b8ac' }}>
+                                {f.festival_date}
+                              </span>
+                            )}
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
-          {ungrouped.map((f, i) => (
-            <div key={i} className={styles.timelineItem}>
-              <div className={styles.timelineDotCol}>
-                <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
-              </div>
-              <div className={styles.timelineContent}>
-                <div className={styles.timelineTop}>
-                  <span className={styles.timelineName}>{f.name}</span>
-                  <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
-                </div>
-                {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
-              </div>
-            </div>
-          ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }
