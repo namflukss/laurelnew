@@ -933,6 +933,7 @@ function GalleryView({ strategy }) {
 }
 
 const TIER_DOT_COLOR = { A: '#FF5200', B: '#FAC703', C: '#9ca3af' }
+const TIER_NAME_SIZE = { A: 22, B: 18, C: 15 }
 
 function TimelineView({ festivals }) {
   const sorted    = [...festivals].filter(f => f.submit_by).sort((a, b) => {
@@ -950,123 +951,103 @@ function TimelineView({ festivals }) {
 
   if (allGroups.length === 0) {
     return (
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #ede8e1', padding: '40px 24px', textAlign: 'center' }}>
+      <div style={{ padding: '32px 0' }}>
         <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b8a898' }}>No deadline data available</div>
       </div>
     )
   }
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #ede8e1', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-      {/* Header */}
-      <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #ede8e1' }}>
-        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 700, color: '#1a1008', letterSpacing: '-0.01em' }}>
-          Festival Timeline
+    <div style={{ background: '#fff', borderTop: '2px solid #1a1008', overflow: 'hidden' }}>
+      {/* Header — left-aligned, no card chrome */}
+      <div style={{ padding: '22px 0 18px', display: 'flex', alignItems: 'baseline', gap: 16, borderBottom: '1px solid #ede8e1' }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 700, color: '#1a1008', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+          Submission Schedule
         </div>
-        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: '#b8a898', marginTop: 3, letterSpacing: '0.04em' }}>
-          Submission deadlines · {festivals.length} festivals
+        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#b8a898', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          {festivals.length} festivals
         </div>
       </div>
 
-      {/* Scrollable horizontal roadmap */}
-      <div style={{ padding: '28px 24px 24px', overflowX: 'auto' }}>
-        <div style={{ position: 'relative', minWidth: allGroups.length * 192 }}>
+      {/* Horizontal scroll — columns per month */}
+      <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+        <div style={{ display: 'flex', minWidth: allGroups.length * 210 }}>
+          {allGroups.map((group, gi) => {
+            const isActive = group.month !== null
+            const monthShort = group.month ? MONTH_FULL[group.month].slice(0, 3).toUpperCase() : '–'
+            const yearShort  = group.year  ? String(group.year).slice(2) : ''
 
-          {/* Horizontal line */}
-          <div style={{ position: 'absolute', left: 0, right: 0, top: 7, height: 1, background: '#ede8e1' }} />
-
-          <div style={{ display: 'flex' }}>
-            {allGroups.map((group, gi) => {
-              const dotColor = group.month ? '#FF5200' : '#9ca3af'
-              const monthLabel = group.month ? `${MONTH_FULL[group.month]} ${group.year}` : 'No deadline'
-              const isActive = group.month !== null
-
-              return (
-                <motion.div
-                  key={group.key}
-                  style={{ flex: '0 0 192px', paddingTop: 32, paddingRight: 12, position: 'relative' }}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: gi * 0.08 }}
-                >
-                  {/* Timeline dot */}
-                  <motion.div
-                    whileHover={{ scale: 1.25 }}
-                    style={{
-                      position: 'absolute', left: '50%', top: 0,
-                      transform: 'translateX(-50%)',
-                      width: 15, height: 15, borderRadius: '50%',
-                      background: isActive ? dotColor : '#e5e0db',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'default', zIndex: 1,
-                    }}
-                  >
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />
-                  </motion.div>
-
-                  {/* Month badge */}
-                  <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                    <span style={{
-                      display: 'inline-block',
-                      fontFamily: "'Geist Mono', monospace", fontSize: 9, fontWeight: 600,
-                      letterSpacing: '0.07em', textTransform: 'uppercase',
-                      padding: '3px 9px', borderRadius: 99,
-                      background: isActive ? 'rgba(255,82,0,0.09)' : 'rgba(0,0,0,0.05)',
-                      color: isActive ? '#FF5200' : '#9ca3af',
-                      border: `1px solid ${isActive ? 'rgba(255,82,0,0.2)' : 'rgba(0,0,0,0.08)'}`,
-                    }}>
-                      {monthLabel}
-                    </span>
+            return (
+              <motion.div
+                key={group.key}
+                style={{ flex: '0 0 210px', paddingTop: 24, paddingRight: 16, borderRight: '1px solid #ede8e1' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: gi * 0.06 }}
+              >
+                {/* Month header — large number + small label, left-aligned */}
+                <div style={{ marginBottom: 20, paddingBottom: 14, borderBottom: `2px solid ${isActive ? '#FF5200' : '#ede8e1'}` }}>
+                  <div style={{
+                    fontFamily: "'Barlow Condensed', sans-serif",
+                    fontSize: 44, fontWeight: 700, lineHeight: 1,
+                    color: isActive ? '#1a1008' : '#c4b8ac',
+                    letterSpacing: '-0.01em',
+                  }}>
+                    {monthShort}
                   </div>
-
-                  {/* Festival cards */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {group.festivals.map((f, fi) => {
-                      const tierColor = TIER_DOT_COLOR[f.tier] || '#9ca3af'
-                      return (
-                        <motion.div
-                          key={fi}
-                          style={{
-                            background: '#faf9f7', borderRadius: 8,
-                            padding: '9px 11px',
-                            border: '1px solid #ede8e1',
-                            borderLeft: `2px solid ${tierColor}`,
-                          }}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.25, delay: gi * 0.08 + fi * 0.04 }}
-                        >
-                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: '#1a1008', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1.1 }}>
-                            {f.name}
-                          </div>
-                          {f.location && (
-                            <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#b8a898', marginTop: 3 }}>
-                              {f.location}
-                            </div>
-                          )}
-                          <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                            <span style={{
-                              fontFamily: "'Geist Mono', monospace", fontSize: 8, fontWeight: 600,
-                              letterSpacing: '0.08em', color: tierColor,
-                              background: `${tierColor}15`, padding: '2px 6px', borderRadius: 4,
-                            }}>
-                              TIER {f.tier}
-                            </span>
-                            {f.festival_date && (
-                              <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: '#c4b8ac' }}>
-                                {f.festival_date}
-                              </span>
-                            )}
-                          </div>
-                        </motion.div>
-                      )
-                    })}
+                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#b8a898', letterSpacing: '0.1em', marginTop: 2 }}>
+                    {isActive ? `'${yearShort}` : 'NO DEADLINE'}
                   </div>
-                </motion.div>
-              )
-            })}
-          </div>
+                </div>
+
+                {/* Festival entries — no cards, just text rows */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                  {group.festivals.map((f, fi) => {
+                    const accentColor = TIER_DOT_COLOR[f.tier] || '#9ca3af'
+                    const nameSize    = TIER_NAME_SIZE[f.tier]  || 15
+                    return (
+                      <div
+                        key={fi}
+                        style={{
+                          paddingTop: 10, paddingBottom: 10,
+                          paddingLeft: 10,
+                          borderLeft: `2px solid ${accentColor}`,
+                          marginBottom: 6,
+                        }}
+                      >
+                        <div style={{
+                          fontFamily: "'Barlow Condensed', sans-serif",
+                          fontSize: nameSize, fontWeight: 700,
+                          color: '#1a1008', textTransform: 'uppercase',
+                          letterSpacing: '0.02em', lineHeight: 1.05,
+                        }}>
+                          {f.name}
+                        </div>
+                        {f.location && (
+                          <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: '#b8a898', marginTop: 3 }}>
+                            {f.location}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
+      </div>
+
+      {/* Legend — bottom, inline, minimal */}
+      <div style={{ padding: '12px 0', borderTop: '1px solid #ede8e1', display: 'flex', gap: 20 }}>
+        {[['A', '#FF5200', '22px'], ['B', '#FAC703', '18px'], ['C', '#9ca3af', '15px']].map(([tier, color, size]) => (
+          <div key={tier} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 2, height: 14, background: color, flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: size, fontWeight: 700, color: '#1a1008', textTransform: 'uppercase', lineHeight: 1 }}>
+              Tier {tier}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
