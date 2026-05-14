@@ -311,6 +311,76 @@ function getIntro(text) {
   return idx > 0 ? text.slice(0, idx).trim() : null
 }
 
+// ─── Festival geo coordinates ────────────────────────────────────────────────
+
+const FEST_COORDS = {
+  'Sundance': { lat: 40.65, lng: -111.50 },
+  'Cannes': { lat: 43.55, lng: 7.02 },
+  'TIFF': { lat: 43.65, lng: -79.38 },
+  'Toronto': { lat: 43.65, lng: -79.38 },
+  'Venice': { lat: 45.43, lng: 12.33 },
+  'Berlinale': { lat: 52.52, lng: 13.40 },
+  'Berlin': { lat: 52.52, lng: 13.40 },
+  'SXSW': { lat: 30.27, lng: -97.74 },
+  'Tribeca': { lat: 40.71, lng: -74.00 },
+  'Hot Docs': { lat: 43.65, lng: -79.38 },
+  'Clermont-Ferrand': { lat: 45.78, lng: 3.08 },
+  'Annecy': { lat: 45.90, lng: 6.12 },
+  'Locarno': { lat: 46.17, lng: 8.80 },
+  'AFI Fest': { lat: 34.10, lng: -118.32 },
+  'AFI': { lat: 34.10, lng: -118.32 },
+  'True/False': { lat: 38.95, lng: -92.33 },
+  'Sheffield': { lat: 53.38, lng: -1.47 },
+  'Sheffield DocFest': { lat: 53.38, lng: -1.47 },
+  'Edinburgh': { lat: 55.95, lng: -3.19 },
+  'Palm Springs': { lat: 33.83, lng: -116.54 },
+  'Rotterdam': { lat: 51.92, lng: 4.48 },
+  'IFFR': { lat: 51.92, lng: 4.48 },
+  'San Sebastián': { lat: 43.32, lng: -1.98 },
+  'San Sebastian': { lat: 43.32, lng: -1.98 },
+  'Telluride': { lat: 37.94, lng: -107.81 },
+  'NYFF': { lat: 40.77, lng: -73.98 },
+  'New York': { lat: 40.71, lng: -74.00 },
+  'Busan': { lat: 35.10, lng: 129.04 },
+  'London': { lat: 51.51, lng: -0.13 },
+  'BFI': { lat: 51.51, lng: -0.13 },
+  'IDFA': { lat: 52.37, lng: 4.90 },
+  'Amsterdam': { lat: 52.37, lng: 4.90 },
+  'Copenhagen': { lat: 55.68, lng: 12.57 },
+  'Zurich': { lat: 47.38, lng: 8.54 },
+  'Sitges': { lat: 41.23, lng: 1.81 },
+  'San Francisco': { lat: 37.77, lng: -122.42 },
+  'SFIFF': { lat: 37.77, lng: -122.42 },
+  'Fantasia': { lat: 45.50, lng: -73.57 },
+  'Montreal': { lat: 45.50, lng: -73.57 },
+  'Chattanooga': { lat: 35.05, lng: -85.31 },
+  'Warsaw': { lat: 52.23, lng: 21.01 },
+  'Hong Kong': { lat: 22.30, lng: 114.18 },
+  'Tokyo': { lat: 35.68, lng: 139.69 },
+  'Sydney': { lat: -33.87, lng: 151.21 },
+  'Mumbai': { lat: 19.08, lng: 72.88 },
+  'Buenos Aires': { lat: -34.60, lng: -58.38 },
+  'Thessaloniki': { lat: 40.64, lng: 22.94 },
+  'Stockholm': { lat: 59.33, lng: 18.07 },
+  'Göteborg': { lat: 57.71, lng: 11.97 },
+  'Gothenburg': { lat: 57.71, lng: 11.97 },
+  'Lisbon': { lat: 38.72, lng: -9.14 },
+  'DocLisboa': { lat: 38.72, lng: -9.14 },
+  'Visions du Réel': { lat: 46.38, lng: 6.24 },
+  'Austin': { lat: 30.27, lng: -97.74 },
+  'Los Angeles': { lat: 34.05, lng: -118.24 },
+}
+
+function findFestCoords(name) {
+  if (!name) return null
+  if (FEST_COORDS[name]) return FEST_COORDS[name]
+  const lname = name.toLowerCase()
+  for (const [key, coords] of Object.entries(FEST_COORDS)) {
+    if (lname.includes(key.toLowerCase()) || key.toLowerCase().includes(lname)) return coords
+  }
+  return null
+}
+
 // ─── Month utilities ─────────────────────────────────────────────────────────
 
 const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -570,69 +640,261 @@ function CardsView({ strategy }) {
   )
 }
 
+// ─── Strategy Globe ───────────────────────────────────────────────────────────
+
+function StrategyGlobe({ festivals, hoveredName }) {
+  const canvasRef = useRef(null)
+  const stateRef  = useRef({ rotY: 0.3, targetY: 0.3, dragging: false, lastX: 0 })
+  const festRef   = useRef(festivals)
+  const hovRef    = useRef(hoveredName)
+  festRef.current = festivals
+  hovRef.current  = hoveredName
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    let raf = 0
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect()
+      canvas.width  = Math.max(2, Math.floor(rect.width))  * window.devicePixelRatio
+      canvas.height = Math.max(2, Math.floor(rect.height)) * window.devicePixelRatio
+    }
+
+    function project(lat, lng, rotY, cx, cy, r) {
+      const phi   = (90 - lat) * Math.PI / 180
+      const theta = (lng + 180) * Math.PI / 180 + rotY
+      const x = -Math.sin(phi) * Math.cos(theta)
+      const y =  Math.cos(phi)
+      const z =  Math.sin(phi) * Math.sin(theta)
+      if (z < -0.05) return null
+      return { x: cx + x * r, y: cy - y * r, depth: z }
+    }
+
+    function draw() {
+      const { rotY } = stateRef.current
+      const W = canvas.width, H = canvas.height
+      ctx.clearRect(0, 0, W, H)
+
+      const cx = W / 2, cy = H / 2
+      const r  = Math.min(W, H) * 0.40
+
+      // Background sphere glow
+      const grad = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r)
+      grad.addColorStop(0, 'rgba(255,82,0,0.07)')
+      grad.addColorStop(1, 'rgba(0,0,0,0)')
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.fillStyle = grad; ctx.fill()
+
+      // Globe outline
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1; ctx.stroke()
+
+      // Latitude rings
+      for (let lat = -60; lat <= 60; lat += 30) {
+        const pts = []
+        for (let lng = -180; lng <= 182; lng += 3) {
+          const p = project(lat, lng, rotY, cx, cy, r)
+          if (p) pts.push(p)
+        }
+        if (pts.length < 2) continue
+        ctx.beginPath()
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
+        ctx.strokeStyle = lat === 0 ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'
+        ctx.lineWidth = lat === 0 ? 0.8 : 0.4; ctx.stroke()
+      }
+
+      // Longitude lines
+      for (let lng = -180; lng < 180; lng += 30) {
+        const pts = []
+        for (let lat = -80; lat <= 80; lat += 4) {
+          const p = project(lat, lng, rotY, cx, cy, r)
+          if (p) pts.push(p)
+        }
+        if (pts.length < 2) continue
+        ctx.beginPath()
+        pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y))
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 0.4; ctx.stroke()
+      }
+
+      // Festival pins
+      const TCOLOR = { A: '#FF5200', B: '#FAC703', C: '#9ca3af' }
+      const visible = []
+      festRef.current.forEach(f => {
+        const coords = findFestCoords(f.name)
+        if (!coords) return
+        const p = project(coords.lat, coords.lng, rotY, cx, cy, r)
+        if (!p) return
+        visible.push({ ...p, name: f.name, tier: f.tier })
+      })
+
+      // Sort back-to-front
+      visible.sort((a, b) => a.depth - b.depth)
+
+      visible.forEach(({ x, y, depth, name, tier }) => {
+        const color    = TCOLOR[tier] || '#FAC703'
+        const isHov    = hovRef.current === name
+        const alpha    = Math.min(1, depth * 1.5 + 0.4)
+        const dotR     = isHov ? 5 : 3.5
+
+        ctx.globalAlpha = alpha
+
+        // Halo pulse on hover
+        if (isHov) {
+          ctx.beginPath(); ctx.arc(x, y, dotR * 2.8, 0, Math.PI * 2)
+          ctx.fillStyle = color + '28'; ctx.fill()
+          ctx.beginPath(); ctx.arc(x, y, dotR * 1.7, 0, Math.PI * 2)
+          ctx.fillStyle = color + '50'; ctx.fill()
+        }
+
+        // Dot
+        ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2)
+        ctx.fillStyle = color; ctx.fill()
+
+        // Label on hover
+        if (isHov) {
+          ctx.globalAlpha = Math.min(1, alpha * 1.4)
+          ctx.font = `bold 11px "Barlow Condensed", "Inter", sans-serif`
+          ctx.fillStyle = color
+          ctx.textBaseline = 'middle'
+          ctx.fillText(name.toUpperCase(), x + dotR + 5, y)
+        }
+
+        ctx.globalAlpha = 1
+      })
+    }
+
+    function tick() {
+      raf = requestAnimationFrame(tick)
+      const s = stateRef.current
+      if (!s.dragging) s.targetY += 0.0018
+      s.rotY += (s.targetY - s.rotY) * 0.07
+      draw()
+    }
+
+    function onDown(e) {
+      stateRef.current.dragging = true
+      stateRef.current.lastX = e.clientX
+    }
+    function onMove(e) {
+      if (!stateRef.current.dragging) return
+      stateRef.current.targetY += (e.clientX - stateRef.current.lastX) * 0.005
+      stateRef.current.lastX = e.clientX
+    }
+    function onUp() { stateRef.current.dragging = false }
+
+    canvas.addEventListener('pointerdown', onDown)
+    canvas.addEventListener('pointermove', onMove)
+    canvas.addEventListener('pointerup', onUp)
+    canvas.addEventListener('pointerleave', onUp)
+
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+    resize()
+    tick()
+
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+      canvas.removeEventListener('pointerdown', onDown)
+      canvas.removeEventListener('pointermove', onMove)
+      canvas.removeEventListener('pointerup', onUp)
+      canvas.removeEventListener('pointerleave', onUp)
+    }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: '100%', height: 200, display: 'block',
+        background: '#0a0503', borderRadius: 10, cursor: 'grab',
+      }}
+    />
+  )
+}
+
 function TimelineView({ festivals }) {
-  const sorted = [...festivals].filter(f => f.submit_by).sort((a, b) => {
+  const [hoveredName, setHoveredName] = useState(null)
+
+  const sorted    = [...festivals].filter(f => f.submit_by).sort((a, b) => {
     const pa = parseMonthYear(a.submit_by)
     const pb = parseMonthYear(b.submit_by)
     return (pa?.sortKey ?? 999999) - (pb?.sortKey ?? 999999)
   })
   const ungrouped = festivals.filter(f => !f.submit_by)
-  const groups = groupByDeadline(sorted)
+  const groups    = groupByDeadline(sorted)
 
   return (
-    <div className={styles.timelineView}>
-      {groups.map((group, gi) => (
-        <div key={group.key} className={styles.timelineGroup}>
-          <div className={styles.timelineMonthHead}>
-            <span className={styles.timelineMonthLabel}>{MONTH_FULL[group.month]} {group.year}</span>
-            <div className={styles.timelineMonthLine} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Globe */}
+      <StrategyGlobe festivals={festivals} hoveredName={hoveredName} />
+
+      {/* Timeline list */}
+      <div className={styles.timelineView}>
+        {groups.map((group, gi) => (
+          <div key={group.key} className={styles.timelineGroup}>
+            <div className={styles.timelineMonthHead}>
+              <span className={styles.timelineMonthLabel}>{MONTH_FULL[group.month]} {group.year}</span>
+              <div className={styles.timelineMonthLine} />
+            </div>
+            {group.festivals.map((f, fi) => {
+              const isLast = fi === group.festivals.length - 1 && gi === groups.length - 1 && ungrouped.length === 0
+              const hasCoords = !!findFestCoords(f.name)
+              return (
+                <div
+                  key={fi}
+                  className={styles.timelineItem}
+                  onMouseEnter={() => hasCoords && setHoveredName(f.name)}
+                  onMouseLeave={() => setHoveredName(null)}
+                >
+                  <div className={styles.timelineDotCol}>
+                    <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
+                    {!isLast && <div className={styles.timelineConnector} />}
+                  </div>
+                  <div className={styles.timelineContent} style={hoveredName === f.name ? { borderColor: TIER_ACCENT[f.tier] || '#9ca3af' } : {}}>
+                    <div className={styles.timelineTop}>
+                      <div>
+                        <span className={styles.timelineName}>{f.name}</span>
+                        {f.location && <span className={styles.timelineLoc}>{f.location}</span>}
+                      </div>
+                      <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
+                    </div>
+                    {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
+                    {f.festival_date && <div className={styles.timelineFestDate}>Festival: {f.festival_date}</div>}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-          {group.festivals.map((f, fi) => {
-            const isLast = fi === group.festivals.length - 1 && gi === groups.length - 1 && ungrouped.length === 0
-            return (
-              <div key={fi} className={styles.timelineItem}>
+        ))}
+        {ungrouped.length > 0 && (
+          <div className={styles.timelineGroup}>
+            <div className={styles.timelineMonthHead}>
+              <span className={styles.timelineMonthLabel}>No deadline</span>
+              <div className={styles.timelineMonthLine} />
+            </div>
+            {ungrouped.map((f, i) => (
+              <div key={i} className={styles.timelineItem}
+                onMouseEnter={() => findFestCoords(f.name) && setHoveredName(f.name)}
+                onMouseLeave={() => setHoveredName(null)}
+              >
                 <div className={styles.timelineDotCol}>
                   <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
-                  {!isLast && <div className={styles.timelineConnector} />}
                 </div>
-                <div className={styles.timelineContent}>
+                <div className={styles.timelineContent} style={hoveredName === f.name ? { borderColor: TIER_ACCENT[f.tier] || '#9ca3af' } : {}}>
                   <div className={styles.timelineTop}>
-                    <div>
-                      <span className={styles.timelineName}>{f.name}</span>
-                      {f.location && <span className={styles.timelineLoc}>{f.location}</span>}
-                    </div>
+                    <span className={styles.timelineName}>{f.name}</span>
                     <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
                   </div>
                   {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
-                  {f.festival_date && <div className={styles.timelineFestDate}>Festival: {f.festival_date}</div>}
                 </div>
               </div>
-            )
-          })}
-        </div>
-      ))}
-      {ungrouped.length > 0 && (
-        <div className={styles.timelineGroup}>
-          <div className={styles.timelineMonthHead}>
-            <span className={styles.timelineMonthLabel}>No deadline</span>
-            <div className={styles.timelineMonthLine} />
+            ))}
           </div>
-          {ungrouped.map((f, i) => (
-            <div key={i} className={styles.timelineItem}>
-              <div className={styles.timelineDotCol}>
-                <div className={`${styles.timelineDot} ${TIER_DOT_CLASS[f.tier] || styles.timelineDotC}`} />
-              </div>
-              <div className={styles.timelineContent}>
-                <div className={styles.timelineTop}>
-                  <span className={styles.timelineName}>{f.name}</span>
-                  <span className={`${styles.timelineBadge} ${TIER_BADGE2[f.tier] || styles.timelineBadgeC}`}>TIER {f.tier}</span>
-                </div>
-                {f.reason && <p className={styles.timelineReason}>{f.reason}</p>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
