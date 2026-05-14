@@ -447,8 +447,8 @@ function StrategyDashboard({ strategy, onBack }) {
 
       {/* ── Header ── */}
       <div style={{
-        background: 'rgba(10,5,3,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: '#0f0a06',
+        borderBottom: '2px solid #FF5200',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 24px', height: 52, flexShrink: 0,
       }}>
@@ -567,13 +567,13 @@ function FestivalCardV2({ festival, tier }) {
             {festival.submit_by && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 9, color: '#b8a898', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'Geist Mono', monospace" }}>Submit by</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#FF5200', fontFamily: "'Inter', sans-serif" }}>{festival.submit_by}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#FF5200', fontFamily: "'Geist Mono', monospace" }}>{festival.submit_by}</span>
               </div>
             )}
             {festival.festival_date && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span style={{ fontSize: 9, color: '#b8a898', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'Geist Mono', monospace" }}>Festival</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#1a1008', fontFamily: "'Inter', sans-serif" }}>{festival.festival_date}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1008', fontFamily: "'Geist Mono', monospace" }}>{festival.festival_date}</span>
               </div>
             )}
           </div>
@@ -588,7 +588,7 @@ function FestivalCardV2({ festival, tier }) {
             <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: color, marginBottom: 6, fontFamily: "'Geist Mono', monospace" }}>
               Why
             </div>
-            <p style={{ fontSize: 12, lineHeight: 1.65, color: '#7a6655', margin: 0, fontFamily: "'Inter', sans-serif" }}>
+            <p style={{ fontSize: 13, lineHeight: 1.7, color: '#3a3028', margin: 0, fontFamily: "Georgia, serif", fontStyle: 'italic' }}>
               {festival.reason}
             </p>
           </div>
@@ -875,56 +875,49 @@ function GlobeView({ festivals }) {
 
 // ─── Gallery View ─────────────────────────────────────────────────────────────
 
-const GALLERY_PALETTES = [
-  { bg: '#1b3a36', accent: '#FF5200' },
-  { bg: '#3a2a1c', accent: '#FAC703' },
-  { bg: '#1c2a3a', accent: '#5aa9e9' },
-  { bg: '#3a1c2a', accent: '#c97aa7' },
-  { bg: '#2a2a1c', accent: '#cfcf6a' },
-  { bg: '#2a1c2a', accent: '#b85cd6' },
-  { bg: '#1c2a2a', accent: '#5acfcf' },
-  { bg: '#2a1a0a', accent: '#FF8C00' },
-  { bg: '#1a2a1a', accent: '#7ecf5a' },
-]
+const TIER_GALLERY = {
+  A: { bg: '#0f0a06', border: '#FF5200', text: '#FF5200' },
+  B: { bg: '#0a0905', border: '#FAC703', text: '#FAC703' },
+  C: { bg: '#08080a', border: '#6b7280', text: '#9ca3af' },
+}
 
 function GalleryView({ strategy }) {
   const all = flatFestivals(strategy)
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 8 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 1, background: '#ede8e1' }}>
       {all.map((f, i) => {
-        const { bg, accent } = GALLERY_PALETTES[i % GALLERY_PALETTES.length]
+        const pal = TIER_GALLERY[f.tier] || TIER_GALLERY.C
         return (
-          <div key={i} style={{ background: bg, borderRadius: 10, overflow: 'hidden', position: 'relative', minHeight: 168, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at top left, ${accent}28 0%, transparent 65%)`, pointerEvents: 'none' }} />
-            <div style={{ position: 'relative', padding: '14px 14px 12px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: accent, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 6 }}>
-                  TIER {f.tier}
-                </div>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1 }}>
-                  {f.name}
-                </div>
-                {f.location && (
-                  <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.38)', marginTop: 5, letterSpacing: '0.04em' }}>
-                    {f.location}
-                  </div>
-                )}
+          <div key={i} style={{ background: pal.bg, position: 'relative', minHeight: 160, display: 'flex', flexDirection: 'column', padding: '16px 14px 14px', borderTop: `2px solid ${pal.border}` }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: pal.text, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10, opacity: 0.7 }}>
+                TIER {f.tier}
               </div>
-              <div style={{ marginTop: 14 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 26, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 1 }}>
+                {f.name}
+              </div>
+              {f.location && (
+                <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, color: 'rgba(255,255,255,0.3)', marginTop: 6, letterSpacing: '0.04em' }}>
+                  {f.location}
+                </div>
+              )}
+            </div>
+            {(f.submit_by || f.festival_date) && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {f.submit_by && (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Submit</span>
-                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: accent, letterSpacing: '0.02em' }}>{f.submit_by}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 7, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Submit</span>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, fontWeight: 600, color: pal.text }}>{f.submit_by}</span>
                   </div>
                 )}
                 {f.festival_date && (
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 2 }}>
-                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Festival</span>
-                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.65)', letterSpacing: '0.02em' }}>{f.festival_date}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 7, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Festival</span>
+                    <span style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{f.festival_date}</span>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         )
       })}
