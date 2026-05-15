@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useScroll, useTransform, useMotionTemplate, useReducedMotion, cubicBezier } from 'framer-motion'
 import { Sparkles, CalendarDays, Layers, Wallet, Command, LayoutGrid, Plus, ArrowUp, X, FileText, Globe2, Film } from 'lucide-react'
 import * as THREE from 'three'
 import styles from './Laurel.module.css'
@@ -1227,6 +1227,102 @@ function Landing({ onChat, onExplore }) {
   )
 }
 
+// ─── Scroll Tilted Grid ───────────────────────────────────────────────────────
+
+const FESTIVAL_IMAGES = [
+  'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&q=80',
+  'https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&q=80',
+  'https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?w=600&q=80',
+  'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&q=80',
+  'https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=600&q=80',
+  'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&q=80',
+  'https://images.unsplash.com/photo-1518676590629-3dcbd9dc65bb?w=600&q=80',
+  'https://images.unsplash.com/photo-1567596388756-f6d710c8fc07?w=600&q=80',
+  'https://images.unsplash.com/photo-1512070679279-8988d32161be?w=600&q=80',
+  'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=600&q=80',
+  'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=600&q=80',
+  'https://images.unsplash.com/photo-1500099817043-86d46000d58f?w=600&q=80',
+]
+
+const _easeIntoFocus  = cubicBezier(0.22, 1, 0.36, 1)
+const _easeOutOfFocus = cubicBezier(0, 0, 0.58, 1)
+const _focusEase      = [_easeIntoFocus, _easeOutOfFocus]
+
+function FestivalTile({ src, side, perspective = 900, maxTilt = 70, maxBlur = 8, aspectRatio = '3/4', rounded = '2px' }) {
+  const ref    = useRef(null)
+  const reduce = useReducedMotion()
+  const sign   = side === 'L' ? -1 : 1
+
+  const { scrollYProgress: p } = useScroll({ target: ref, offset: ['start end', 'end start'] })
+
+  const blur     = useTransform(p, [0, 0.5, 1], [maxBlur, 0, maxBlur],     { ease: _focusEase })
+  const bright   = useTransform(p, [0, 0.5, 1], [0, 1, 0],                 { ease: _focusEase })
+  const contrast = useTransform(p, [0, 0.5, 1], [4, 1, 4],                 { ease: _focusEase })
+  const ty       = useTransform(p, [0, 0.5, 1], ['100%', '0%', '-100%'],   { ease: _focusEase })
+  const tz       = useTransform(p, [0, 0.5, 1], [300, 0, 300],             { ease: _focusEase })
+  const rx       = useTransform(p, [0, 0.5, 1], [maxTilt, 0, -maxTilt],    { ease: _focusEase })
+  const tx       = useTransform(p, [0, 0.5, 1], [`${sign * 40}%`, '0%', `${sign * 40}%`], { ease: _focusEase })
+  const rot      = useTransform(p, [0, 0.5, 1], [-sign * 5, 0, sign * 5],  { ease: _focusEase })
+  const sk       = useTransform(p, [0, 0.5, 1], [sign * 20, 0, -sign * 20],{ ease: _focusEase })
+  const innerSY  = useTransform(p, [0, 0.5, 1], [1.8, 1, 1.8],             { ease: _focusEase })
+  const filter   = useMotionTemplate`blur(${blur}px) brightness(${bright}) contrast(${contrast})`
+
+  if (reduce) {
+    return (
+      <figure ref={ref} style={{ position: 'relative', zIndex: 10, margin: 0 }}>
+        <div style={{ position: 'relative', width: '100%', overflow: 'hidden', aspectRatio, borderRadius: rounded }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("${src}")`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        </div>
+      </figure>
+    )
+  }
+
+  return (
+    <motion.figure ref={ref} style={{ position: 'relative', zIndex: 10, margin: 0, perspective, willChange: 'transform' }}>
+      <motion.div
+        style={{ position: 'relative', width: '100%', overflow: 'hidden', aspectRatio, borderRadius: rounded, filter, x: tx, y: ty, z: tz, rotate: rot, rotateX: rx, skewX: sk }}
+      >
+        <motion.div
+          style={{ position: 'absolute', inset: 0, backgroundImage: `url("${src}")`, backgroundSize: 'cover', backgroundPosition: 'center', scaleY: innerSY, backfaceVisibility: 'hidden' }}
+        />
+      </motion.div>
+    </motion.figure>
+  )
+}
+
+function ExploreWelcome({ festivalCount }) {
+  return (
+    <div style={{ position: 'relative', width: '100%', background: '#0a0806' }}>
+      {/* Sticky hero text */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, pointerEvents: 'none', padding: '48px 40px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 9, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>
+          Circuit Intelligence — Browse the festival landscape
+        </div>
+        <div style={{ height: 1, background: '#FF5200', width: 40, marginTop: 2 }} />
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 64, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: 0.95, marginTop: 8 }}>
+          The<br />Circuit.
+        </div>
+        <div style={{ fontFamily: "'Geist Mono', monospace", fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 8, letterSpacing: '0.06em' }}>
+          {festivalCount} festivals · Every format · Every tier
+        </div>
+        <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontStyle: 'italic', color: 'rgba(255,255,255,0.45)', marginTop: 4, maxWidth: 260, lineHeight: 1.6 }}>
+          Scroll to explore — or use the filters below.
+        </div>
+      </div>
+
+      {/* Tilted grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, maxWidth: 480, margin: '0 auto', padding: '18vh 24px 20vh', width: '100%' }}>
+        {FESTIVAL_IMAGES.map((src, i) => (
+          <FestivalTile key={i} src={src} side={i % 2 === 0 ? 'L' : 'R'} />
+        ))}
+      </div>
+
+      {/* Fade to page background */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, background: 'linear-gradient(to bottom, transparent, #f0f1f2)', pointerEvents: 'none' }} />
+    </div>
+  )
+}
+
 // ─── Explore Festivals ────────────────────────────────────────────────────────
 
 function ExploreFestivals({ onBack }) {
@@ -1245,6 +1341,7 @@ function ExploreFestivals({ onBack }) {
         </div>
       </header>
       <div className={styles.exploreBody}>
+        <ExploreWelcome festivalCount={FESTIVALS.length} />
         <div className={styles.filterBar}>
           {FILTERS.map(f => (
             <button key={f} className={`${styles.filterBtn} ${filter === f ? styles.filterActive : ''}`} onClick={() => setFilter(f)}>{f}</button>
